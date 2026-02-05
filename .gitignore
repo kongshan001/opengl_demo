@@ -1,0 +1,43 @@
+# Build directory
+build/
+*.o
+*.obj
+*.exe
+*.out
+*.app
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+
+# CLAUDE
+.claude/
+.ruff_cache/
+
+# Third-party libraries
+third_party/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
