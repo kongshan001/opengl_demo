@@ -1,6 +1,6 @@
 # OpenGL Demo
 
-一个最小可运行的OpenGL demo项目，使用现代OpenGL 3.3核心配置绘制橙色三角形。包含Python和C++两种实现版本，展示了模块化的项目结构和Shader管理。
+一个使用现代OpenGL 3.3核心配置绘制橙色三角形的C++演示项目，展示了模块化的项目结构和Shader管理。
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![OpenGL](https://img.shields.io/badge/OpenGL-3.3-blue)
@@ -8,12 +8,12 @@
 
 ## 特性
 
-- 🎯 **双实现版本**：提供Python和C++两种语言实现
 - 🏗️ **模块化架构**：清晰的项目结构，分离头文件、源文件和资源
 - 🔧 **CShader类**：封装Shader管理，支持从文件或字符串加载
 - 📦 **资源管理**：独立的resources目录管理GLSL着色器、纹理和模型
 - 🚀 **跨平台**：支持macOS、Linux和Windows
 - 📚 **现代OpenGL**：使用OpenGL 3.3 Core Profile和GLSL 330
+- 🎯 **易于扩展**：支持自定义着色器和纹理
 
 ## 项目结构
 
@@ -34,32 +34,14 @@ opengl_demo/
 │   └── models/           # 3D模型（预留）
 ├── third_party/          # 第三方库（不提交到git）
 ├── build/               # 构建输出目录
-├── opengl_demo.py       # Python版本实现
-├── requirements.txt     # Python依赖
-├── CMakeLists.txt      # C++构建配置
-├── README.md           # 项目说明
-└── CLAUDE.md           # 开发者指南
+├── CMakeLists.txt       # C++构建配置
+├── README.md            # 项目说明
+└── CLAUDE.md            # 开发者指南
 ```
 
 ## 快速开始
 
-### Python版本
-
-#### 安装依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-#### 运行
-
-```bash
-python3 opengl_demo.py
-```
-
-### C++版本
-
-#### 构建项目
+### 构建项目
 
 ```bash
 mkdir -p build
@@ -68,13 +50,13 @@ cmake ..
 make
 ```
 
-#### 运行
+### 运行
 
 ```bash
 ./opengl_demo
 ```
 
-#### 构建选项
+### 构建选项
 
 **macOS用户**：如果CMake作为应用程序安装，路径通常为：
 ```
@@ -141,28 +123,19 @@ CShader shader("resources/shaders/custom.vs", "resources/shaders/custom.fs");
 
 ## 技术栈
 
-### Python版本
-- **PyGame**: 窗口管理和事件处理
-- **PyOpenGL**: OpenGL绑定
-- **OpenGL 1.2**: 传统固定管线
-
-### C++版本
 - **GLFW**: 跨平台窗口和上下文创建
 - **GLAD**: OpenGL函数加载器
 - **OpenGL 3.3 Core**: 现代可编程管线
 - **CMake**: 跨平台构建系统
 - **GLSL 330**: 现代着色器语言
 
-## 实现对比
+## 主要特性
 
-| 特性 | Python版本 | C++版本 |
-|------|-----------|---------|
-| OpenGL版本 | 1.2 (传统) | 3.3 Core (现代) |
-| GLSL版本 | 120 | 330 |
-| 窗口管理 | PyGame | GLFW |
-| Shader管理 | 内联 | 文件 + CShader类 |
-| VAO支持 | 否 | 是 |
-| 平台链接 | 自动 | CMake配置 |
+- **现代OpenGL**: 使用OpenGL 3.3 Core Profile，抛弃固定管线
+- **VAO/VBO管理**: 使用顶点数组对象和顶点缓冲对象
+- **Shader类封装**: 统一的Shader加载和编译接口
+- **资源文件分离**: GLSL代码独立于C++源码
+- **错误处理**: 完善的编译和链接错误检查
 
 ## 开发指南
 
