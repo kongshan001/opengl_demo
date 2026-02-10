@@ -9,6 +9,7 @@ find_package(OpenGL REQUIRED)
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm
 )
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/lib)
 

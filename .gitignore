@@ -25,6 +25,10 @@ Makefile
 .claude/
 .ruff_cache/
 
+# Compiler cache
+.cache/
+.clangd/
+
 # Third-party libraries
 third_party/
 
