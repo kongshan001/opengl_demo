@@ -2,7 +2,7 @@
 # OpenGL Demo 项目主构建配置
 
 cmake_minimum_required(VERSION 3.10)
-project(opengl_demo VERSION 1.0.0 LANGUAGES CXX)
+project(opengl_demo VERSION 1.0.0 LANGUAGES CXX C)
 
 # ============================================================================
 # 全局设置

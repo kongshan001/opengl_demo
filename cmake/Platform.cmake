@@ -5,8 +5,7 @@
 if(APPLE)
     set(PLATFORM_LIBRARIES
         ${OPENGL_LIBRARIES}
-        glfw3
-        glad
+        glfw
         "-framework Cocoa"
         "-framework IOKit"
         "-framework CoreVideo"
@@ -14,10 +13,9 @@ if(APPLE)
 elseif(UNIX)
     set(PLATFORM_LIBRARIES
         ${OPENGL_LIBRARIES}
-        glfw3
-        glad
+        glfw
         -ldl
-        -pthread
+        -lpthread
     )
 elseif(WIN32)
     set(PLATFORM_LIBRARIES

@@ -27,3 +27,6 @@ file(GLOB_RECURSE LIB_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/mesh/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/shader/*.cpp"
 )
+
+# 添加 GLAD 源文件 (OpenGL loader)
+list(APPEND LIB_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/src/glad.c")

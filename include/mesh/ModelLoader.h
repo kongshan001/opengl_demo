@@ -4,18 +4,52 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <stdexcept>
 #include "mesh/Mesh.h"
 
-// 模型加载器接口
+/**
+ * @brief Exception class for model loading errors.
+ */
+class ModelLoadException : public std::runtime_error {
+public:
+    explicit ModelLoadException(const std::string& message)
+        : std::runtime_error(message) {}
+};
+
+/**
+ * @brief Model loader interface.
+ * 
+ * Abstract base class for format-specific model loaders.
+ */
 class IModelLoader {
 public:
     virtual ~IModelLoader() = default;
+    
+    /**
+     * @brief Loads a model from the specified file.
+     * @param filepath Path to the model file.
+     * @return Vector of meshes contained in the model.
+     * @throws ModelLoadException If loading fails.
+     */
     virtual std::vector<std::shared_ptr<CMesh>> loadModel(const std::string& filepath) = 0;
+    
+    /**
+     * @brief Checks if this loader can handle the given file.
+     * @param filepath Path to check.
+     * @return true if the file extension is supported.
+     */
     virtual bool canLoad(const std::string& filepath) const = 0;
+    
+    /**
+     * @brief Returns the supported file extension.
+     * @return Extension string (e.g., "obj").
+     */
     virtual const char* getSupportedExtension() const = 0;
 };
 
-// OBJ格式加载器
+/**
+ * @brief OBJ format model loader.
+ */
 class OBJLoader : public IModelLoader {
 public:
     std::vector<std::shared_ptr<CMesh>> loadModel(const std::string& filepath) override;
@@ -47,30 +81,53 @@ private:
                    std::vector<std::shared_ptr<CMesh>>& meshes);
 };
 
-// 模型加载器工厂
+/**
+ * @brief Factory for creating model loaders.
+ */
 class ModelLoaderFactory {
 public:
-    static IModelLoader* createLoader(const std::string& filepath);
+    /**
+     * @brief Creates a loader for the given file.
+     * @param filepath Path to the model file.
+     * @return Unique pointer to a loader, or nullptr if unsupported.
+     */
+    static std::unique_ptr<IModelLoader> createLoader(const std::string& filepath);
+    
     static void registerLoader(std::unique_ptr<IModelLoader> loader);
     
 private:
     static std::vector<std::unique_ptr<IModelLoader>> loaders;
 };
 
-// 主模型加载器类（简化接口）
+/**
+ * @brief Main model loader class with simplified interface.
+ */
 class CModelLoader {
 public:
-    // 加载模型文件
+    /**
+     * @brief Loads a model file.
+     * @param filepath Path to the model file.
+     * @return Vector of meshes.
+     * @throws ModelLoadException If loading fails or format is unsupported.
+     */
     static std::vector<std::shared_ptr<CMesh>> load(const std::string& filepath);
     
-    // 检查文件格式是否支持
+    /**
+     * @brief Checks if a file format is supported.
+     * @param filepath Path to check.
+     * @return true if supported.
+     */
     static bool isSupported(const std::string& filepath);
     
-    // 获取支持的文件格式列表
+    /**
+     * @brief Returns list of supported formats.
+     * @return Vector of supported extensions.
+     */
     static std::vector<std::string> getSupportedFormats();
 
 private:
-    CModelLoader() = default;
+    CModelLoader() = delete;
+    ~CModelLoader() = delete;
 };
 
 #endif

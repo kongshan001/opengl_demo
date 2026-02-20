@@ -1,5 +1,4 @@
 #include "mesh/ModelLoader.h"
-#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
@@ -9,8 +8,7 @@
 std::vector<std::shared_ptr<CMesh>> OBJLoader::loadModel(const std::string& filepath) {
     std::ifstream file(filepath);
     if (!file.is_open()) {
-        std::cout << "Failed to open OBJ file: " << filepath << std::endl;
-        return {};
+        throw ModelLoadException("Failed to open OBJ file: " + filepath);
     }
     
     std::vector<glm::vec3> positions;
@@ -24,6 +22,10 @@ std::vector<std::shared_ptr<CMesh>> OBJLoader::loadModel(const std::string& file
     }
     
     file.close();
+    
+    if (positions.empty()) {
+        throw ModelLoadException("OBJ file contains no vertices: " + filepath);
+    }
     
     std::vector<std::shared_ptr<CMesh>> meshes;
     createMesh(positions, normals, texCoords, indices, meshes);
@@ -69,19 +71,22 @@ void OBJLoader::parseOBJ(const std::string& content,
             size_t slash1 = faceData.find('/');
             size_t slash2 = faceData.find('/', slash1 + 1);
             
-            // 位置索引
-            index.positionIndex = std::stoi(faceData.substr(0, slash1)) - 1;
+            // 位置索引 (OBJ 使用 1-based 索引)
+            int posIdx = std::stoi(faceData.substr(0, slash1));
+            index.positionIndex = static_cast<unsigned int>(posIdx > 0 ? posIdx - 1 : positions.size() + posIdx);
             
             if (slash2 != std::string::npos && slash2 != slash1 + 1) {
                 // 纹理坐标索引
-                index.texCoordIndex = std::stoi(faceData.substr(slash1 + 1, slash2 - slash1 - 1)) - 1;
+                int texIdx = std::stoi(faceData.substr(slash1 + 1, slash2 - slash1 - 1));
+                index.texCoordIndex = static_cast<unsigned int>(texIdx > 0 ? texIdx - 1 : texCoords.size() + texIdx);
             } else {
                 index.texCoordIndex = 0;
             }
             
-            if (slash2 != std::string::npos) {
+            if (slash2 != std::string::npos && slash2 + 1 < faceData.length()) {
                 // 法线索引
-                index.normalIndex = std::stoi(faceData.substr(slash2 + 1)) - 1;
+                int normIdx = std::stoi(faceData.substr(slash2 + 1));
+                index.normalIndex = static_cast<unsigned int>(normIdx > 0 ? normIdx - 1 : normals.size() + normIdx);
             } else {
                 index.normalIndex = 0;
             }
@@ -105,6 +110,11 @@ void OBJLoader::createMesh(const std::vector<glm::vec3>& positions,
     std::unordered_map<size_t, unsigned int> vertexMap;
     
     for (const auto& idx : indices) {
+        // 边界检查
+        if (idx.positionIndex >= positions.size()) {
+            throw ModelLoadException("Invalid position index in OBJ file");
+        }
+        
         // 创建哈希键
         size_t key = std::hash<std::string>{}(
             std::to_string(idx.positionIndex) + "|" +
@@ -118,27 +128,28 @@ void OBJLoader::createMesh(const std::vector<glm::vec3>& positions,
         } else {
             Vertex vertex;
             
-            if (idx.positionIndex < positions.size()) {
-                vertex.position = positions[idx.positionIndex];
-            }
+            // 位置（已验证边界）
+            vertex.position = positions[idx.positionIndex];
             
-            if (idx.normalIndex < normals.size()) {
+            // 法线（可选）
+            if (!normals.empty() && idx.normalIndex < normals.size()) {
                 vertex.normal = normals[idx.normalIndex];
             }
             
-            if (idx.texCoordIndex < texCoords.size()) {
+            // 纹理坐标（可选）
+            if (!texCoords.empty() && idx.texCoordIndex < texCoords.size()) {
                 vertex.texCoords = texCoords[idx.texCoordIndex];
             }
             
             vertices.push_back(vertex);
-            unsigned int vertexIndex = vertices.size() - 1;
+            unsigned int vertexIndex = static_cast<unsigned int>(vertices.size() - 1);
             vertexMap[key] = vertexIndex;
             meshIndices.push_back(vertexIndex);
         }
     }
     
     // 创建网格
-    auto mesh = std::make_shared<CMesh>(vertices, meshIndices);
+    auto mesh = std::shared_ptr<CMesh>(new CMesh(vertices, meshIndices));
     mesh->calculateNormals(); // 如果没有法线，计算默认法线
     mesh->calculateBoundingBox();
     
@@ -147,51 +158,36 @@ void OBJLoader::createMesh(const std::vector<glm::vec3>& positions,
 
 std::vector<std::unique_ptr<IModelLoader>> ModelLoaderFactory::loaders;
 
-IModelLoader* ModelLoaderFactory::createLoader(const std::string& filepath) {
-    // 根据文件扩展名选择加载器
+std::unique_ptr<IModelLoader> ModelLoaderFactory::createLoader(const std::string& filepath) {
     size_t dotPos = filepath.find_last_of('.');
     if (dotPos == std::string::npos) {
         return nullptr;
     }
     
     std::string extension = filepath.substr(dotPos + 1);
+    std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
     
-    // 目前只支持OBJ格式
-    if (extension == "obj" || extension == "OBJ") {
-        static bool objLoaderRegistered = false;
-        if (!objLoaderRegistered) {
-            // 注意：这里需要在实际使用时注册OBJ加载器
-            objLoaderRegistered = true;
-        }
-        // 简单返回OBJ加载器（实际项目中应该是单例或静态工厂）
-        return new OBJLoader();
+    if (extension == "obj") {
+        return std::unique_ptr<IModelLoader>(new OBJLoader());
     }
     
     return nullptr;
 }
 
 std::vector<std::shared_ptr<CMesh>> CModelLoader::load(const std::string& filepath) {
-    IModelLoader* loader = ModelLoaderFactory::createLoader(filepath);
-    if (loader) {
-        auto meshes = loader->loadModel(filepath);
-        delete loader;
-        return meshes;
+    auto loader = ModelLoaderFactory::createLoader(filepath);
+    if (!loader) {
+        throw ModelLoadException("Unsupported model format: " + filepath);
     }
     
-    std::cout << "Unsupported model format: " << filepath << std::endl;
-    return {};
+    return loader->loadModel(filepath);
 }
 
 bool CModelLoader::isSupported(const std::string& filepath) {
-    IModelLoader* loader = ModelLoaderFactory::createLoader(filepath);
-    if (loader) {
-        bool supported = loader->canLoad(filepath);
-        delete loader;
-        return supported;
-    }
-    return false;
+    auto loader = ModelLoaderFactory::createLoader(filepath);
+    return loader != nullptr;
 }
 
 std::vector<std::string> CModelLoader::getSupportedFormats() {
-    return {"obj", "OBJ"};
+    return {"obj"};
 }
