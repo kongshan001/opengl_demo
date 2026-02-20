@@ -7,6 +7,8 @@
 #include <glm/glm.hpp>
 #include "mesh/Texture.h"
 
+class CShader;
+
 class CMaterial {
 public:
     // 基础属性
@@ -35,6 +37,11 @@ public:
     // 析构函数
     ~CMaterial();
     
+    // Shader管理
+    void setShader(std::shared_ptr<CShader> shader);
+    std::shared_ptr<CShader> getShader() const { return shader; }
+    bool hasShader() const { return shader != nullptr; }
+    
     // 纹理管理
     void addTexture(std::shared_ptr<CTexture> texture);
     void removeTexture(size_t index);
@@ -47,8 +54,11 @@ public:
     void setColors(const glm::vec3& diffuse, const glm::vec3& specular, const glm::vec3& ambient);
     void setProperties(float shininess, float specularStrength, float opacity = 1.0f);
     
-    // 应用材质到着色器
-    void apply(class CShader& shader) const;
+    // 应用材质（使用内置Shader）
+    void apply() const;
+    
+    // 应用材质到指定着色器（兼容旧接口）
+    void applyToShader(CShader& shader) const;
     
     // 材质信息
     const std::string& getName() const { return name; }
@@ -62,9 +72,10 @@ public:
 
 private:
     std::string name;
+    std::shared_ptr<CShader> shader;
     
     // 绑定纹理到着色器
-    void bindTextures(class CShader& shader) const;
+    void bindTextures(CShader& shader) const;
 };
 
 #endif

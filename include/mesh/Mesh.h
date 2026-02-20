@@ -8,6 +8,8 @@
 #include "mesh/Vertex.h"
 #include "mesh/Material.h"
 
+class CShader;
+
 enum class PrimitiveType {
     Triangles = GL_TRIANGLES,
     TriangleStrip = GL_TRIANGLE_STRIP,
@@ -54,7 +56,8 @@ public:
     // 渲染接口
     void bind() const;
     void unbind() const;
-    void draw() const;
+    void draw() const;  // 使用Material中的Shader
+    void draw(CShader& shader) const;  // 使用指定Shader
     void drawInstanced(unsigned int instanceCount) const;
     
     // 数据更新

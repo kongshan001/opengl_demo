@@ -1,4 +1,5 @@
 #include "mesh/Mesh.h"
+#include "shader/Shader.h"
 #include <iostream>
 
 CMesh::CMesh() 
@@ -138,6 +139,33 @@ void CMesh::unbind() const {
 
 void CMesh::draw() const {
     if (!initialized || vertices.empty()) return;
+    
+    // 如果有材质且材质有shader，使用材质的shader
+    if (material && material->hasShader()) {
+        material->apply();  // 使用内置shader并应用材质参数
+    }
+    
+    bind();
+    
+    if (hasIndices()) {
+        glDrawElements(static_cast<GLenum>(primitiveType), static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0);
+    } else {
+        glDrawArrays(static_cast<GLenum>(primitiveType), 0, static_cast<GLsizei>(vertices.size()));
+    }
+    
+    unbind();
+}
+
+void CMesh::draw(CShader& shader) const {
+    if (!initialized || vertices.empty()) return;
+    
+    // 使用指定的shader
+    shader.use();
+    
+    // 如果有材质，应用材质参数到shader
+    if (material) {
+        material->applyToShader(shader);
+    }
     
     bind();
     

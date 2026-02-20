@@ -1,39 +1,61 @@
+# CMakeLists.txt
+# OpenGL Demo 项目主构建配置
+
 cmake_minimum_required(VERSION 3.10)
-project(opengl_demo)
+project(opengl_demo VERSION 1.0.0 LANGUAGES CXX)
+
+# ============================================================================
+# 全局设置
+# ============================================================================
 
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(OpenGL REQUIRED)
+# 启用测试
+enable_testing()
 
-# Set include directories before creating executable
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm
-)
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/lib)
+# 设置 cmake 模块路径
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# Collect all source files
-file(GLOB_RECURSE SOURCES 
-    "src/*.cpp"
-    "src/*/*.cpp"
-)
+# ============================================================================
+# 依赖项
+# ============================================================================
 
-add_executable(opengl_demo ${SOURCES})
+include(Dependencies)
 
+# ============================================================================
+# 平台配置
+# ============================================================================
+
+include(Platform)
+
+# ============================================================================
+# 主可执行文件
+# ============================================================================
+
+# 收集主程序源文件
+file(GLOB MAIN_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+
+# 创建可执行文件
+add_executable(opengl_demo ${MAIN_SOURCE} ${LIB_SOURCES})
+
+# 设置包含目录
 target_include_directories(opengl_demo PRIVATE ${OPENGL_INCLUDE_DIR})
 
-# Copy resources to build directory
+# 复制资源到构建目录
 add_custom_command(TARGET opengl_demo POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_CURRENT_SOURCE_DIR}/resources
     ${CMAKE_CURRENT_BINARY_DIR}/resources
+    COMMENT "Copying resources to build directory"
 )
 
-if(APPLE)
-    target_link_libraries(opengl_demo ${OPENGL_LIBRARIES} glfw3 glad "-framework Cocoa" "-framework IOKit" "-framework CoreVideo")
-elseif(UNIX)
-    target_link_libraries(opengl_demo ${OPENGL_LIBRARIES} glfw3 glad -ldl -pthread)
-elseif(WIN32)
-    target_link_libraries(opengl_demo ${OPENGL_LIBRARIES} glfw3 glad)
-endif()
+# 链接平台库
+target_link_libraries(opengl_demo ${PLATFORM_LIBRARIES})
+
+# ============================================================================
+# 测试配置
+# ============================================================================
+
+include(Testing)
