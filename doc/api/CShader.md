@@ -1,25 +1,41 @@
 # CShader API 参考
 
-`CShader` 类提供OpenGL着色器编译、链接和管理功能，支持多种Uniform变量类型。
+`CShader` 类提供 OpenGL 着色器编译、链接和管理功能，支持多种 Uniform 变量类型。
+
+## 异常类
+
+```cpp
+class ShaderException : public std::exception {
+public:
+    explicit ShaderException(const std::string& message);
+    const char* what() const noexcept override;
+};
+```
+
+当以下情况发生时抛出 `ShaderException`：
+- 着色器文件无法打开
+- 着色器文件为空
+- 着色器编译失败
+- 着色器程序链接失败
 
 ## 类概述
 
 ```cpp
 class CShader {
 public:
-    unsigned int ID;  // 着色器程序ID
+    unsigned int ID;  // 着色器程序 ID
     
-    // 构造函数
+    // 构造函数（失败时抛出 ShaderException）
     CShader(const char* vertexSource, const char* fragmentSource);
     CShader(const std::string& vertexPath, const std::string& fragmentPath);
     
-    // 析造函数
+    // 析构函数（RAII：自动删除程序）
     ~CShader();
     
-    // 着色器使用
+    // 激活着色器
     void use();
     
-    // Uniform设置方法
+    // Uniform 设置方法（自动缓存 location）
     void setBool(const std::string& name, bool value) const;
     void setInt(const std::string& name, int value) const;
     void setFloat(const std::string& name, float value) const;
@@ -29,23 +45,46 @@ public:
 };
 ```
 
+## 特性
+
+### Uniform Location 缓存
+Uniform location 会自动缓存，避免重复的 OpenGL 查询，提升性能：
+
+```cpp
+// 首次调用：查询 OpenGL 并缓存
+shader.setMat4("model", modelMatrix);
+
+// 后续调用：直接使用缓存
+shader.setMat4("model", anotherMatrix);  // 更快！
+```
+
+### RAII 资源管理
+着色器程序在析构时自动删除：
+
+```cpp
+{
+    CShader shader("vs.glsl", "fs.glsl");
+    // 使用 shader...
+}  // 自动调用 glDeleteProgram()
+```
+
 ## 创建着色器
 
 ### 从文件加载（推荐）
 ```cpp
-// 从文件创建着色器
-CShader shader(
-    "resources/shaders/vertex.glsl", 
-    "resources/shaders/fragment.glsl"
-);
-
-// 使用着色器
-shader.use();
+try {
+    CShader shader(
+        "resources/shaders/vertex.glsl", 
+        "resources/shaders/fragment.glsl"
+    );
+    shader.use();
+} catch (const ShaderException& e) {
+    std::cerr << "Shader error: " << e.what() << std::endl;
+}
 ```
 
 ### 从字符串创建
 ```cpp
-// 从字符串创建着色器
 const char* vertexSource = R"GLSL(
     #version 330 core
     layout (location = 0) in vec3 aPos;
@@ -62,10 +101,14 @@ const char* fragmentSource = R"GLSL(
     }
 )";
 
-CShader shader(vertexSource, fragmentSource);
+try {
+    CShader shader(vertexSource, fragmentSource);
+} catch (const ShaderException& e) {
+    // 处理编译/链接错误
+}
 ```
 
-## Uniform变量设置
+## Uniform 变量设置
 
 ### 基础类型
 ```cpp
@@ -85,37 +128,40 @@ glm::mat4 model = glm::mat4(1.0f);
 shader.setMat4("model", model);
 ```
 
-### 材质Uniform设置示例
+### MVP 矩阵设置
 ```cpp
-shader.use();
-
-// 设置漫反射颜色
-shader.setVec3("material.diffuse", glm::vec3(0.8f, 0.3f, 0.2f));
-
-// 设置镜面反射
-shader.setFloat("material.shininess", 32.0f);
-shader.setFloat("material.specularStrength", 0.5f);
-
-// 设置纹理采样器
-shader.setInt("texture_diffuse", 0);
-shader.setInt("texture_normal", 1);
-```
-
-### MVP矩阵设置
-```cpp
-// 计算MVP矩阵
 glm::mat4 model = glm::mat4(1.0f);
 glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
 glm::mat4 projection = glm::perspective(glm::radians(45.0f), 
                                               (float)SCR_WIDTH / (float)SCR_HEIGHT, 
                                               0.1f, 100.0f);
 
-// 设置到着色器
 shader.use();
 shader.setMat4("model", model);
 shader.setMat4("view", view);
 shader.setMat4("projection", projection);
 ```
+
+## 错误处理
+
+### 捕获异常
+```cpp
+try {
+    CShader shader("nonexistent.glsl", "fragment.glsl");
+} catch (const ShaderException& e) {
+    // 输出：Failed to open shader file: nonexistent.glsl
+    std::cerr << e.what() << std::endl;
+}
+```
+
+### 常见错误信息
+
+| 错误类型 | 示例信息 |
+|---------|---------|
+| 文件未找到 | `Failed to open shader file: path/to/shader.glsl` |
+| 文件为空 | `Shader file is empty: path/to/shader.glsl` |
+| 编译失败 | `Vertex shader compilation failed: ERROR: 0:1: ...` |
+| 链接失败 | `Shader program linking failed: ERROR: ...` |
 
 ## 着色器文件规范
 
@@ -157,75 +203,58 @@ uniform vec3 lightPos;
 uniform vec3 lightColor;
 
 void main() {
-    // 环境光
     vec3 ambient = 0.1 * lightColor;
-    
-    // 漫反射
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(lightPos - FragPos);
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * lightColor;
-    
-    // 纹理
     vec4 texColor = texture(texture_diffuse, TexCoord);
     
     FragColor = vec4((ambient + diffuse) * texColor.rgb, texColor.a);
 }
 ```
 
-## 错误处理
-
-`CShader`类自动处理着色器编译和链接错误，错误信息会输出到标准输出：
-
-```cpp
-// 编译错误示例
-Shader compilation failed: ERROR: 0:1: '' :  #version required and missing.
-ERROR: 0:1: 'resources' : syntax error: syntax error
-
-// 链接错误示例  
-Program linking failed: ERROR: 0:1: '' :  #version required and missing.
-ERROR: 0:1: 'resources' : syntax error: syntax error
-```
-
 ## 最佳实践
 
 ### 1. 资源文件路径
 ```cpp
-// ✅ 正确：使用绝对路径或相对路径从可执行文件位置
-CShader shader("../shaders/vertex.glsl", "../shaders/fragment.glsl");
+// ✅ 正确：使用相对路径
+CShader shader("resources/shaders/vertex.glsl", "resources/shaders/fragment.glsl");
 
-// ✅ 正确：使用std::string构造函数
-CShader shader(std::string("vertex.glsl"), std::string("fragment.glsl"));
-
-// ❌ 错误：混合路径类型
-CShader shader("vertex.glsl", std::string("../fragment.glsl"));  // 可能导致文件找不到
+// ❌ 错误：使用不存在的路径（会抛出异常）
+CShader shader("missing.glsl", "missing.fs");  // ShaderException!
 ```
 
-### 2. 着色器错误检查
-- 确保#version指令在文件开头
-- 检查分号使用情况
-- 验证变量名称与使用一致
-- 检查数据类型匹配
+### 2. 异常处理
+```cpp
+// ✅ 正确：捕获异常
+try {
+    CShader shader(path1, path2);
+    // 使用 shader...
+} catch (const ShaderException& e) {
+    logError(e.what());
+    return false;
+}
+
+// ❌ 错误：忽略异常可能导致程序崩溃
+CShader shader("bad.glsl", "bad.fs");  // 未捕获的异常
+```
 
 ### 3. 性能优化
-- 重新编译着色器仅在源代码改变时
-- 缓存Uniform位置，避免频繁设置
-- 使用glUniform*iv批量设置数组Uniform
+- Uniform location 自动缓存，无需手动优化
+- 避免每帧重新创建着色器对象
+- 在初始化时加载所有着色器
 
 ## 常见问题
 
-### 1. 着色器找不到
-**问题：** 着色器文件路径错误
-**解决：** 检查文件路径和CMakeLists.txt中的资源复制配置
+### 1. 着色器文件找不到
+**问题：** `ShaderException: Failed to open shader file`
+**解决：** 检查文件路径，确保资源已复制到构建目录
 
-### 2. Uniform未生效
-**问题：** 在设置Uniform前忘记调用`use()`
-**解决：** 确保在设置Uniform前调用`shader.use()`
+### 2. Uniform 未生效
+**问题：** 设置了 Uniform 但效果不显示
+**解决：** 确保在设置前调用 `shader.use()`
 
-### 3. 着色器编译错误
-**问题：** GLSL语法错误或不支持的特性
-**解决：** 使用glslc工具或在线GLSL编辑器检查语法
-
-### 4. Uniform类型不匹配
-**问题：** 设置了错误的Uniform类型
-**解决：** 确认着色器中Uniform声明类型与C++中设置的类型一致
+### 3. 编译错误
+**问题：** `Vertex shader compilation failed`
+**解决：** 检查 GLSL 语法，确保 `#version` 在文件开头

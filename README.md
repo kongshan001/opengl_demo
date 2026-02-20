@@ -1,53 +1,77 @@
 # OpenGL Demo
 
-一个使用现代OpenGL 3.3核心配置绘制橙色三角形的C++演示项目，展示了模块化的项目结构和Shader管理。
+一个现代 OpenGL 3.3 Core Profile 演示项目，展示了模块化架构、RAII 资源管理和生产级代码质量。
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![OpenGL](https://img.shields.io/badge/OpenGL-3.3-blue)
+![C++](https://img.shields.io/badge/C++-11-blue)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## 特性
 
-- 🏗️ **模块化架构**：清晰的项目结构，分离头文件、源文件和资源
-- 🔧 **CShader类**：封装Shader管理，支持从文件或字符串加载
-- 📦 **资源管理**：独立的resources目录管理GLSL着色器、纹理和模型
-- 🚀 **跨平台**：支持macOS、Linux和Windows
-- 📚 **现代OpenGL**：使用OpenGL 3.3 Core Profile和GLSL 330
-- 🎯 **易于扩展**：支持自定义着色器和纹理
+- **模块化架构**：清晰的项目结构，分离头文件、源文件和资源
+- **RAII 资源管理**：使用智能指针和异常安全保证
+- **异常处理**：完善的 `ShaderException` 和 `ModelLoadException` 错误处理
+- **性能优化**：Uniform location 缓存，避免重复 OpenGL 查询
+- **跨平台**：支持 macOS、Linux 和 Windows
+- **单元测试**：Google Test 测试框架集成
 
 ## 项目结构
 
 ```
 opengl_demo/
-├── include/              # C++头文件
-│   └── shader/
-│       └── Shader.h      # CShader类定义
-├── src/                  # C++源文件
+├── include/              # C++ 头文件
+│   ├── shader/
+│   │   └── Shader.h      # CShader 类 + ShaderException
+│   └── mesh/
+│       ├── Mesh.h        # CMesh 类（顶点、索引、包围盒）
+│       ├── Material.h    # CMaterial 材质系统
+│       ├── Texture.h     # CTexture 纹理加载
+│       ├── Vertex.h      # CVertex 顶点结构
+│       ├── MeshUtils.h   # 几何体生成工具
+│       └── ModelLoader.h # CModelLoader + ModelLoadException
+├── src/                  # C++ 源文件
 │   ├── main.cpp          # 主程序入口
-│   └── shader/
-│       └── Shader.cpp    # CShader类实现
+│   ├── shader/
+│   │   └── Shader.cpp
+│   └── mesh/
+│       ├── Mesh.cpp
+│       ├── Material.cpp
+│       ├── Texture.cpp
+│       ├── MeshUtils.cpp
+│       └── ModelLoader.cpp
 ├── resources/            # 资源文件
-│   ├── shaders/          # GLSL着色器
-│   │   ├── triangle.vs   # 顶点着色器
-│   │   └── triangle.fs   # 片段着色器
-│   ├── textures/         # 贴图文件（预留）
-│   └── models/           # 3D模型（预留）
-├── third_party/          # 第三方库（不提交到git）
-├── build/               # 构建输出目录
-├── CMakeLists.txt       # C++构建配置
-├── README.md            # 项目说明
-└── CLAUDE.md            # 开发者指南
+│   ├── shaders/          # GLSL 着色器
+│   ├── textures/         # 纹理文件
+│   └── models/           # 3D 模型（OBJ 格式）
+├── tests/                # 单元测试
+│   ├── test_shader.cpp
+│   ├── test_material.cpp
+│   └── test_vertex.cpp
+├── third_party/          # 第三方库
+├── doc/                  # 文档
+│   ├── api/              # API 参考
+│   └── examples/         # 示例代码
+├── cmake/                # CMake 模块
+├── CMakeLists.txt        # 构建配置
+└── README.md
 ```
 
 ## 快速开始
 
+### 依赖项
+
+- CMake 3.10+
+- C++11 编译器
+- OpenGL 3.3+
+- GLFW（系统安装）
+
 ### 构建项目
 
 ```bash
-mkdir -p build
-cd build
+mkdir -p build && cd build
 cmake ..
-make
+make -j$(nproc)
 ```
 
 ### 运行
@@ -56,109 +80,122 @@ make
 ./opengl_demo
 ```
 
-### 构建选项
+### 运行测试
 
-**macOS用户**：如果CMake作为应用程序安装，路径通常为：
-```
-/Applications/CMake.app/Contents/bin/cmake
-```
-
-**VS Code用户**：如果遇到"CMake executable error"，创建`.vscode/settings.json`：
-```json
-{
-    "cmake.cmakePath": "/Applications/CMake.app/Contents/bin/cmake"
-}
+```bash
+./opengl_tests
 ```
 
-## 使用示例
+## 核心类
 
-### CShader类使用
+### CShader - 着色器管理
 
 ```cpp
 #include "shader/Shader.h"
 
-// 从文件加载Shader
+// 从文件加载（失败时抛出 ShaderException）
 CShader shader(
-    std::string("resources/shaders/triangle.vs"),
-    std::string("resources/shaders/triangle.fs")
+    "resources/shaders/triangle.vs",
+    "resources/shaders/triangle.fs"
 );
 
-// 使用Shader
 shader.use();
+shader.setMat4("model", modelMatrix);
+shader.setVec3("lightColor", glm::vec3(1.0f));
 
-// 设置Uniform变量
-shader.setBool("useTexture", true);
-shader.setFloat("alpha", 0.5f);
-shader.setInt("textureUnit", 0);
+// Uniform location 自动缓存，提升性能
 ```
 
-### 自定义Shader
+### CMesh - 网格数据
 
-在`resources/shaders/`目录下创建新的shader文件：
-
-**顶点着色器** (`custom.vs`):
-```glsl
-#version 330 core
-layout (location = 0) in vec3 aPos;
-
-void main() {
-    gl_Position = vec4(aPos, 1.0);
-}
-```
-
-**片段着色器** (`custom.fs`):
-```glsl
-#version 330 core
-out vec4 FragColor;
-
-void main() {
-    FragColor = vec4(1.0, 0.5, 0.2, 1.0); // 橙色
-}
-```
-
-然后在代码中加载：
 ```cpp
-CShader shader("resources/shaders/custom.vs", "resources/shaders/custom.fs");
+#include "mesh/Mesh.h"
+
+// 创建三角形网格
+std::vector<Vertex> vertices = {...};
+std::vector<unsigned int> indices = {...};
+
+CMesh mesh(vertices, indices);
+mesh.calculateBoundingBox();
+mesh.calculateNormals();
+
+// 渲染
+mesh.bind();
+mesh.draw();
 ```
+
+### CModelLoader - 模型加载
+
+```cpp
+#include "mesh/ModelLoader.h"
+
+try {
+    auto meshes = CModelLoader::load("resources/models/cube.obj");
+    for (const auto& mesh : meshes) {
+        mesh->draw(shader);
+    }
+} catch (const ModelLoadException& e) {
+    std::cerr << "Model load error: " << e.what() << std::endl;
+}
+```
+
+## 架构设计
+
+### 异常处理
+
+```
+std::exception
+    └── ShaderException    // 着色器编译/链接/加载错误
+    └── ModelLoadException // 模型加载错误
+```
+
+所有异常都继承自 `std::exception`，可通过 `what()` 获取错误信息。
+
+### RAII 资源管理
+
+- **CShader**: 析构时自动调用 `glDeleteProgram()`
+- **CMesh**: 析构时自动删除 VAO/VBO/EBO
+- **ModelLoaderFactory**: 返回 `std::unique_ptr`，无内存泄漏
+
+### 性能优化
+
+- Uniform location 缓存（`std::unordered_map`）
+- 索引化顶点消除重复（OBJ 加载器）
+- 包围盒预计算
 
 ## 技术栈
 
-- **GLFW**: 跨平台窗口和上下文创建
-- **GLAD**: OpenGL函数加载器
-- **OpenGL 3.3 Core**: 现代可编程管线
-- **CMake**: 跨平台构建系统
-- **GLSL 330**: 现代着色器语言
+| 组件 | 技术 |
+|------|------|
+| 窗口管理 | GLFW |
+| OpenGL 加载 | GLAD |
+| 数学库 | GLM |
+| 构建系统 | CMake |
+| 测试框架 | Google Test |
+| 图像加载 | stb_image |
 
-## 主要特性
+## 文档
 
-- **现代OpenGL**: 使用OpenGL 3.3 Core Profile，抛弃固定管线
-- **VAO/VBO管理**: 使用顶点数组对象和顶点缓冲对象
-- **Shader类封装**: 统一的Shader加载和编译接口
-- **资源文件分离**: GLSL代码独立于C++源码
-- **错误处理**: 完善的编译和链接错误检查
+- [API 参考](doc/api/)
+  - [CShader](doc/api/CShader.md)
+  - [CMesh](doc/api/CMesh.md)
+- [测试指南](doc/testing.md)
+- [变更日志](doc/changelog.md)
 
 ## 开发指南
 
-详细开发指南请参考 [CLAUDE.md](CLAUDE.md)，包含：
-- 完整的架构说明
-- 构建配置细节
-- CShader类API文档
-- 平台特定配置
+详细开发指南请参考 [CLAUDE.md](CLAUDE.md)。
 
 ## 贡献
 
-欢迎提交Issue和Pull Request！
+欢迎提交 Issue 和 Pull Request！
 
 ## 许可证
 
 MIT License
 
-## 作者
-
-kongshan001
-
 ## 相关资源
 
-- [Learn OpenGL](https://learnopengl.com/) - 优秀的OpenGL教程
+- [Learn OpenGL](https://learnopengl.com/)
 - [GLFW Documentation](https://www.glfw.org/documentation.html)
 - [OpenGL Wiki](https://www.khronos.org/opengl/wiki)
