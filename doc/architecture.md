@@ -1,183 +1,177 @@
-# 架构设计文档
+# OpenGL Demo 架构文档
 
-## 概述
-
-opengl_demo 是一个现代 OpenGL 3.3 Core Profile 演示项目，采用模块化设计，职责分离清晰。
-
-## 模块结构
+## 系统架构
 
 ```
-opengl_demo/
-├── include/              # 头文件
-│   ├── core/             # 核心模块
-│   │   ├── Camera.h      # 相机控制
-│   │   └── Application.h # 应用主类
-│   ├── shader/           # 着色器模块
-│   │   └── Shader.h      # 着色器管理
-│   └── mesh/             # 网格模块
-│       ├── Mesh.h        # 网格数据
-│       ├── Material.h    # 材质系统
-│       ├── Texture.h     # 纹理管理
-│       ├── Vertex.h      # 顶点结构
-│       ├── ModelLoader.h # 模型加载
-│       └── MeshUtils.h   # 几何体工具
-├── src/                  # 源文件
-│   ├── core/             # 核心模块实现
-│   ├── shader/           # 着色器实现
-│   ├── mesh/             # 网格实现
-│   └── main.cpp          # 入口点
-└── resources/            # 资源文件
-    ├── shaders/          # GLSL 着色器
-    └── models/           # 3D 模型
+┌─────────────────────────────────────────────────────────────────┐
+│                        Application Layer                        │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                    Application                            │   │
+│  │  - 窗口管理 (GLFW)                                        │   │
+│  │  - OpenGL 初始化 (GLAD)                                   │   │
+│  │  - 主循环                                                  │   │
+│  │  - 输入处理                                                │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        Scene Layer                              │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐           │
+│  │ Camera  │  │  CMesh  │  │CMaterial│  │ CShader │           │
+│  │         │  │         │  │         │  │         │           │
+│  │ - View  │  │ - VAO   │  │ - Color │  │ - VS/FS │           │
+│  │ - Proj  │  │ - VBO   │  │ - Props │  │ - Uniform│          │
+│  │ - Input │  │ - EBO   │  │ - Tex   │  │ - Cache │           │
+│  └─────────┘  └─────────┘  └─────────┘  └─────────┘           │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        Resource Layer                           │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
+│  │  CTexture   │  │ ModelLoader │  │  MeshUtils  │             │
+│  │             │  │             │  │             │             │
+│  │ - stb_image │  │ - OBJ Parse │  │ - Cube      │             │
+│  │ - GL Texture│  │ - Material  │  │ - Sphere    │             │
+│  └─────────────┘  └─────────────┘  └─────────────┘             │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      OpenGL / GLFW Layer                        │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │              OpenGL 3.3 Core Profile                      │   │
+│  │              GLFW Window Management                       │   │
+│  │              GLAD Loader                                  │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## 核心类职责
+## 模块职责
 
-### Camera（相机类）
+### 1. Application Layer
+负责应用程序的生命周期管理。
 
-**职责**：管理 3D 相机状态和变换
-
-| 方法 | 功能 |
+| 组件 | 职责 |
 |------|------|
-| `getViewMatrix()` | 获取视图矩阵 |
-| `getProjectionMatrix()` | 获取投影矩阵 |
-| `processKeyboard()` | 处理键盘移动 |
-| `processMouseMovement()` | 处理鼠标旋转 |
+| Application | 主程序入口、窗口管理、渲染循环 |
+| Camera | 3D 相机、视角控制 |
 
-**依赖**：glm
+### 2. Scene Layer
+负责场景渲染。
 
-### Application（应用类）
-
-**职责**：管理应用程序生命周期
-
-| 方法 | 功能 |
+| 组件 | 职责 |
 |------|------|
-| `initialize()` | 初始化窗口和 OpenGL |
-| `run()` | 运行主循环 |
-| `close()` | 关闭应用 |
-| `render()` | 渲染一帧 |
+| CShader | 着色器编译、链接、uniform 管理 |
+| CMesh | 顶点数据、VAO/VBO 管理、绘制 |
+| CMaterial | 材质属性、纹理绑定 |
 
-**依赖**：Camera, Shader, Mesh, Material, GLFW
+### 3. Resource Layer
+负责资源加载。
 
-### CShader（着色器类）
-
-**职责**：编译、链接和管理着色器程序
-
-| 方法 | 功能 |
+| 组件 | 职责 |
 |------|------|
-| `use()` | 激活着色器 |
-| `setMat4()` | 设置矩阵 uniform |
-| `setVec3()` | 设置向量 uniform |
-| `setFloat()` | 设置浮点 uniform |
-
-**特性**：
-- 自动编译错误检测（抛出 `ShaderException`）
-- Uniform location 缓存
-
-### CMesh（网格类）
-
-**职责**：管理顶点数据和 VAO/VBO
-
-| 方法 | 功能 |
-|------|------|
-| `draw()` | 渲染网格 |
-| `setMaterial()` | 设置材质 |
-| `calculateBoundingBox()` | 计算包围盒 |
-
-### CMaterial（材质类）
-
-**职责**：封装渲染属性
-
-| 属性 | 类型 | 说明 |
-|------|------|------|
-| ambient | vec3 | 环境光颜色 |
-| diffuse | vec3 | 漫反射颜色 |
-| specular | vec3 | 高光颜色 |
-| shininess | float | 光泽度 |
-
-### CModelLoader（模型加载器）
-
-**职责**：从文件加载 3D 模型
-
-| 方法 | 功能 |
-|------|------|
-| `load()` | 加载模型文件 |
-| `isSupported()` | 检查格式支持 |
-
-**支持格式**：OBJ
-
-### CTexture（纹理类）
-
-**职责**：加载和管理 OpenGL 纹理
-
-| 方法 | 功能 |
-|------|------|
-| `bind()` | 绑定纹理到纹理单元 |
-| `setWrapMode()` | 设置包装模式 |
-| `setFilterMode()` | 设置过滤模式 |
-| `generateMipmaps()` | 生成多级渐远纹理 |
-
-**支持格式**：JPG, PNG, BMP, TGA 等
-
-**示例**：
-```cpp
-auto texture = std::make_shared<CTexture>(
-    "resources/textures/container.png",
-    TextureType::Diffuse
-);
-texture->bind(0);
-```
+| CTexture | 纹理加载、GL 纹理管理 |
+| ModelLoader | 模型文件解析 |
+| MeshUtils | 几何体生成 |
 
 ## 数据流
 
 ```
-main()
-  │
-  ▼
-Application::initialize()
-  ├── initWindow()      → GLFW 窗口
-  ├── initOpenGL()      → GLAD + OpenGL 状态
-  └── initScene()       → Shader + Material + Mesh
-        │
-        ▼
-Application::run()
-  ┌─────────────────┐
-  │ updateDeltaTime │
-  │ processInput    │
-  │ render          │
-  │   ├─ setGlobalUniforms
-  │   └─ renderScene
-  │ glfwSwapBuffers │
-  └─────────────────┘
+用户输入
+    │
+    ▼
+┌─────────┐
+│ Camera  │ ──────► View Matrix
+└─────────┘         Projection Matrix
+    │
+    ▼
+┌─────────────┐
+│ Application │ ──────► Set Uniforms
+└─────────────┘
+    │
+    ▼
+┌─────────┐     ┌──────────┐     ┌──────────┐
+│ CShader │ ◄── │ CMaterial│ ◄── │ CTexture │
+└─────────┘     └──────────┘     └──────────┘
+    │
+    ▼
+┌─────────┐
+│  CMesh  │ ──────► glDrawElements
+└─────────┘
+    │
+    ▼
+  屏幕
 ```
 
-## 设计原则
-
-1. **RAII**：资源在构造时获取，析构时释放
-2. **智能指针**：使用 `shared_ptr` 共享资源
-3. **异常安全**：错误通过异常抛出，不静默失败
-4. **职责单一**：每个类只负责一件事
-5. **依赖注入**：Material 持有 Shader 引用，Mesh 持有 Material 引用
-
-## 扩展点
-
-- **新模型格式**：继承 `IModelLoader`，注册到 `ModelLoaderFactory`
-- **新图元类型**：使用 `PrimitiveType` 枚举
-- **自定义顶点布局**：使用 `VertexAttributeLayout`
-- **纹理系统**：使用 `CTexture` 加载外部纹理，支持多种格式
-
-## 纹理支持
-
-项目支持从外部加载纹理贴图：
+## 渲染管线
 
 ```
-resources/textures/
-├── container.jpg      # 示例纹理
-└── container2.png     # 带边框的容器纹理
+1. 初始化阶段
+   ├── GLFW 窗口创建
+   ├── GLAD OpenGL 加载
+   ├── 编译着色器
+   ├── 加载纹理
+   └── 创建网格 VAO
+
+2. 渲染循环
+   ├── 处理输入 (Input)
+   ├── 更新相机 (Camera)
+   ├── 清除缓冲 (glClear)
+   ├── 设置 Uniform
+   │   ├── view
+   │   ├── projection
+   │   ├── model
+   │   └── material.*
+   ├── 绘制网格 (glDrawElements)
+   └── 交换缓冲 (glfwSwapBuffers)
+
+3. 清理阶段
+   └── GL 资源释放 (RAII)
 ```
 
-**使用流程**：
-1. 加载纹理：`CTexture texture("path/to/texture.png")`
-2. 绑定纹理：`texture.bind(0)`
-3. 着色器采样：`sampler2D diffuseTexture`
-4. 设置 uniform：`shader.setInt("diffuseTexture", 0)`
+## 依赖关系
+
+```
+Application
+    ├── GLFW (窗口)
+    ├── GLAD (OpenGL 加载)
+    ├── GLM (数学库)
+    ├── stb_image (图片加载)
+    └── Google Test (测试)
+```
+
+## 文件结构
+
+```
+opengl_demo/
+├── include/              # 头文件
+│   ├── core/            # 核心模块
+│   │   ├── Application.h
+│   │   └── Camera.h
+│   ├── shader/          # 着色器模块
+│   │   └── Shader.h
+│   └── mesh/            # 网格模块
+│       ├── Mesh.h
+│       ├── Material.h
+│       ├── Texture.h
+│       ├── Vertex.h
+│       └── ModelLoader.h
+├── src/                  # 源文件
+│   ├── main.cpp
+│   ├── core/
+│   ├── shader/
+│   └── mesh/
+├── tests/                # 测试文件
+├── resources/            # 资源文件
+│   ├── shaders/         # GLSL 着色器
+│   ├── textures/        # 纹理图片
+│   └── models/          # 模型文件
+├── doc/                  # 文档
+└── cmake/                # CMake 模块
+```
+
+---
+
+*最后更新: 2026-02-21*
