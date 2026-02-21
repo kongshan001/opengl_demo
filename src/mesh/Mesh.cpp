@@ -308,26 +308,30 @@ void CMesh::initialize() {
 }
 
 void CMesh::setupVertexAttributes() {
+    // 使用实际的 Vertex 结构大小作为 stride，而不是 layout 计算的值
+    // 因为 Vertex 结构可能包含额外的属性（如 tangent, bitangent）
+    GLsizei actualStride = sizeof(Vertex);
+    
     for (const auto& attr : vertexLayout.attributes) {
         switch (attr.type) {
             case VertexAttribute::Position:
-                glVertexAttribPointer(static_cast<GLuint>(attr.type), attr.count, GL_FLOAT, GL_FALSE, vertexLayout.stride, (void*)attr.offset);
+                glVertexAttribPointer(static_cast<GLuint>(attr.type), attr.count, GL_FLOAT, GL_FALSE, actualStride, (void*)attr.offset);
                 glEnableVertexAttribArray(static_cast<GLuint>(attr.type));
                 break;
             case VertexAttribute::Normal:
-                glVertexAttribPointer(static_cast<GLuint>(attr.type), attr.count, GL_FLOAT, GL_FALSE, vertexLayout.stride, (void*)attr.offset);
+                glVertexAttribPointer(static_cast<GLuint>(attr.type), attr.count, GL_FLOAT, GL_FALSE, actualStride, (void*)attr.offset);
                 glEnableVertexAttribArray(static_cast<GLuint>(attr.type));
                 break;
             case VertexAttribute::TexCoords:
-                glVertexAttribPointer(static_cast<GLuint>(attr.type), attr.count, GL_FLOAT, GL_FALSE, vertexLayout.stride, (void*)attr.offset);
+                glVertexAttribPointer(static_cast<GLuint>(attr.type), attr.count, GL_FLOAT, GL_FALSE, actualStride, (void*)attr.offset);
                 glEnableVertexAttribArray(static_cast<GLuint>(attr.type));
                 break;
             case VertexAttribute::Tangent:
-                glVertexAttribPointer(static_cast<GLuint>(attr.type), attr.count, GL_FLOAT, GL_FALSE, vertexLayout.stride, (void*)attr.offset);
+                glVertexAttribPointer(static_cast<GLuint>(attr.type), attr.count, GL_FLOAT, GL_FALSE, actualStride, (void*)attr.offset);
                 glEnableVertexAttribArray(static_cast<GLuint>(attr.type));
                 break;
             case VertexAttribute::Bitangent:
-                glVertexAttribPointer(static_cast<GLuint>(attr.type), attr.count, GL_FLOAT, GL_FALSE, vertexLayout.stride, (void*)attr.offset);
+                glVertexAttribPointer(static_cast<GLuint>(attr.type), attr.count, GL_FLOAT, GL_FALSE, actualStride, (void*)attr.offset);
                 glEnableVertexAttribArray(static_cast<GLuint>(attr.type));
                 break;
             default:
