@@ -119,15 +119,15 @@ std::string CShader::loadShaderSource(const char* filePath) {
     if (!shaderFile.is_open()) {
         throw ShaderException("Failed to open shader file: " + std::string(filePath));
     }
-    
+
     std::stringstream shaderStream;
     shaderStream << shaderFile.rdbuf();
     shaderFile.close();
-    
+
     std::string shaderCode = shaderStream.str();
     if (shaderCode.empty()) {
         throw ShaderException("Shader file is empty: " + std::string(filePath));
     }
-    
+
     return shaderCode;
 }

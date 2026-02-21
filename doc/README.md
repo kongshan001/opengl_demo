@@ -14,7 +14,7 @@
 - [CShader API](api/CShader.md) - 着色器管理API参考
 - [CMesh API](api/CMesh.md) - 网格管理系统API参考
 - [CMaterial API](api/CMaterial.md) - 材质系统API参考
-- [CTexture API](api/CTexture.md) - 纹理管理API参考
+- [CTexture API](api/Texture.md) - 纹理管理API参考
 - [CModelLoader API](api/CModelLoader.md) - 模型加载API参考
 - [MeshUtils API](api/MeshUtils.md) - 几何体工具API参考
 

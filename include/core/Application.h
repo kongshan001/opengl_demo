@@ -9,6 +9,7 @@
 #include "shader/Shader.h"
 #include "mesh/Mesh.h"
 #include "mesh/Material.h"
+#include "mesh/Texture.h"
 
 /**
  * @brief 应用程序配置结构
@@ -93,7 +94,12 @@ private:
     std::shared_ptr<CShader> shader;
     std::shared_ptr<CMaterial> material;
     std::shared_ptr<CMesh> triangleMesh;
+    std::shared_ptr<CMesh> texturedCube;
     std::vector<std::shared_ptr<CMesh>> modelMeshes;
+    
+    // 纹理
+    std::shared_ptr<CTexture> diffuseTexture;
+    std::shared_ptr<CTexture> specularTexture;
     
     // 时间管理
     float deltaTime;

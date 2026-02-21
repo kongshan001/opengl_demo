@@ -106,6 +106,28 @@ opengl_demo/
 
 **支持格式**：OBJ
 
+### CTexture（纹理类）
+
+**职责**：加载和管理 OpenGL 纹理
+
+| 方法 | 功能 |
+|------|------|
+| `bind()` | 绑定纹理到纹理单元 |
+| `setWrapMode()` | 设置包装模式 |
+| `setFilterMode()` | 设置过滤模式 |
+| `generateMipmaps()` | 生成多级渐远纹理 |
+
+**支持格式**：JPG, PNG, BMP, TGA 等
+
+**示例**：
+```cpp
+auto texture = std::make_shared<CTexture>(
+    "resources/textures/container.png",
+    TextureType::Diffuse
+);
+texture->bind(0);
+```
+
 ## 数据流
 
 ```
@@ -142,3 +164,20 @@ Application::run()
 - **新模型格式**：继承 `IModelLoader`，注册到 `ModelLoaderFactory`
 - **新图元类型**：使用 `PrimitiveType` 枚举
 - **自定义顶点布局**：使用 `VertexAttributeLayout`
+- **纹理系统**：使用 `CTexture` 加载外部纹理，支持多种格式
+
+## 纹理支持
+
+项目支持从外部加载纹理贴图：
+
+```
+resources/textures/
+├── container.jpg      # 示例纹理
+└── container2.png     # 带边框的容器纹理
+```
+
+**使用流程**：
+1. 加载纹理：`CTexture texture("path/to/texture.png")`
+2. 绑定纹理：`texture.bind(0)`
+3. 着色器采样：`sampler2D diffuseTexture`
+4. 设置 uniform：`shader.setInt("diffuseTexture", 0)`
