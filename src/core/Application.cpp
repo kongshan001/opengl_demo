@@ -2,6 +2,7 @@
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 #include "mesh/ModelLoader.h"
+#include "mesh/MeshUtils.h"
 
 Application::Application(const AppConfig& config)
     : config(config),
@@ -101,66 +102,22 @@ void Application::initScene() {
         std::cerr << "Texture load error: " << e.what() << std::endl;
     }
 
-    // 创建带纹理坐标的立方体
-    std::vector<Vertex> cubeVertices = {
-        // 前面
-        Vertex(glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 0.0f)),
-        Vertex(glm::vec3( 0.5f, -0.5f,  0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 0.0f)),
-        Vertex(glm::vec3( 0.5f,  0.5f,  0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(1.0f, 1.0f)),
-        Vertex(glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec2(0.0f, 1.0f)),
-        // 后面
-        Vertex(glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec2(1.0f, 0.0f)),
-        Vertex(glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec2(1.0f, 1.0f)),
-        Vertex(glm::vec3( 0.5f,  0.5f, -0.5f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec2(0.0f, 1.0f)),
-        Vertex(glm::vec3( 0.5f, -0.5f, -0.5f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec2(0.0f, 0.0f)),
-        // 顶面
-        Vertex(glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 1.0f)),
-        Vertex(glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f, 0.0f)),
-        Vertex(glm::vec3( 0.5f,  0.5f,  0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 0.0f)),
-        Vertex(glm::vec3( 0.5f,  0.5f, -0.5f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f, 1.0f)),
-        // 底面
-        Vertex(glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec2(0.0f, 0.0f)),
-        Vertex(glm::vec3( 0.5f, -0.5f, -0.5f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec2(1.0f, 0.0f)),
-        Vertex(glm::vec3( 0.5f, -0.5f,  0.5f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec2(1.0f, 1.0f)),
-        Vertex(glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec2(0.0f, 1.0f)),
-        // 右面
-        Vertex(glm::vec3( 0.5f, -0.5f, -0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 0.0f)),
-        Vertex(glm::vec3( 0.5f,  0.5f, -0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 1.0f)),
-        Vertex(glm::vec3( 0.5f,  0.5f,  0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(0.0f, 1.0f)),
-        Vertex(glm::vec3( 0.5f, -0.5f,  0.5f), glm::vec3(1.0f, 0.0f, 0.0f), glm::vec2(0.0f, 0.0f)),
-        // 左面
-        Vertex(glm::vec3(-0.5f, -0.5f, -0.5f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec2(0.0f, 0.0f)),
-        Vertex(glm::vec3(-0.5f, -0.5f,  0.5f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 0.0f)),
-        Vertex(glm::vec3(-0.5f,  0.5f,  0.5f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec2(1.0f, 1.0f)),
-        Vertex(glm::vec3(-0.5f,  0.5f, -0.5f), glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec2(0.0f, 1.0f))
-    };
-
-    std::vector<unsigned int> cubeIndices = {
-        0, 1, 2, 2, 3, 0,       // 前
-        4, 5, 6, 6, 7, 4,       // 后
-        8, 9, 10, 10, 11, 8,    // 顶
-        12, 13, 14, 14, 15, 12, // 底
-        16, 17, 18, 18, 19, 16, // 右
-        20, 21, 22, 22, 23, 20  // 左
-    };
-
-    texturedCube = std::make_shared<CMesh>(cubeVertices, cubeIndices);
+    // 创建多种几何体（使用 MeshUtils）
+    // 立方体
+    texturedCube = MeshUtils::createCube(1.0f);
     texturedCube->setMaterial(material);
-
-    // 创建简单三角形（无纹理）
-    std::vector<Vertex> triangleVertices = {
-        Vertex(glm::vec3( 0.0f,  0.5f, 0.0f),
-               glm::vec3(0.0f, 0.0f, 1.0f),
-               glm::vec2(0.5f, 1.0f)),
-        Vertex(glm::vec3(-0.5f, -0.5f, 0.0f),
-               glm::vec3(0.0f, 0.0f, 1.0f),
-               glm::vec2(0.0f, 0.0f)),
-        Vertex(glm::vec3( 0.5f, -0.5f, 0.0f),
-               glm::vec3(0.0f, 0.0f, 1.0f),
-               glm::vec2(1.0f, 0.0f))
-    };
-    triangleMesh = std::make_shared<CMesh>(triangleVertices);
-    triangleMesh->setMaterial(material);
+    
+    // 球体
+    sphereMesh = MeshUtils::createSphere(0.5f, 32);
+    sphereMesh->setMaterial(material);
+    
+    // 圆柱体
+    cylinderMesh = MeshUtils::createCylinder(0.3f, 1.0f, 32);
+    cylinderMesh->setMaterial(material);
+    
+    // 圆锥体
+    coneMesh = MeshUtils::createCone(0.4f, 0.8f, 32);
+    coneMesh->setMaterial(material);
 }
 
 void Application::run() {
@@ -295,36 +252,41 @@ void Application::renderScene() {
     glActiveTexture(GL_TEXTURE0);
     diffuseTexture->bind(0);
 
-    // 渲染多个立方体，不同位置和颜色
-    struct CubeInfo {
+    // 渲染多种几何体
+    struct GeometryInfo {
+        std::shared_ptr<CMesh> mesh;
         glm::vec3 position;
+        glm::vec3 color;
         float rotationSpeed;
-        glm::vec3 color;  // 用于区分
+        float scale;
     };
     
-    CubeInfo cubes[] = {
-        { glm::vec3( 0.0f,  0.0f,  0.0f), 0.3f, glm::vec3(1.0f, 1.0f, 1.0f) },
-        { glm::vec3( 2.0f,  0.0f, -1.0f), 0.5f, glm::vec3(1.0f, 0.8f, 0.8f) },
-        { glm::vec3(-2.0f,  0.0f, -1.0f), 0.2f, glm::vec3(0.8f, 1.0f, 0.8f) },
-        { glm::vec3( 0.0f,  1.5f, -2.0f), 0.4f, glm::vec3(0.8f, 0.8f, 1.0f) }
+    std::vector<GeometryInfo> geometries = {
+        { texturedCube,  glm::vec3(-2.5f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 0.8f), 0.3f, 0.8f },  // 立方体
+        { sphereMesh,    glm::vec3( 0.0f, 0.0f, 0.0f), glm::vec3(0.8f, 1.0f, 0.8f), 0.5f, 1.0f },  // 球体
+        { cylinderMesh,  glm::vec3( 2.5f, 0.0f, 0.0f), glm::vec3(0.8f, 0.8f, 1.0f), 0.4f, 1.0f },  // 圆柱体
+        { coneMesh,      glm::vec3( 0.0f, 1.5f,-2.0f), glm::vec3(1.0f, 1.0f, 0.8f), 0.6f, 1.0f }   // 圆锥体
     };
     
-    for (const auto& cube : cubes) {
+    for (const auto& geo : geometries) {
+        if (!geo.mesh) continue;
+        
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, cube.position);
-        model = glm::rotate(model, currentTime * cube.rotationSpeed,
-                           glm::vec3(0.5f, 1.0f, 0.3f));
+        model = glm::translate(model, geo.position);
+        model = glm::rotate(model, currentTime * geo.rotationSpeed,
+                           glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(geo.scale));
         shader->setMat4("model", model);
-        shader->setVec3("materialDiffuse", cube.color);
-        texturedCube->draw();
+        shader->setVec3("materialDiffuse", geo.color);
+        geo.mesh->draw();
     }
     
     // 渲染地面（一个大平面）
     shader->setInt("hasDiffuseTexture", 0);
-    shader->setVec3("materialDiffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+    shader->setVec3("materialDiffuse", glm::vec3(0.35f, 0.35f, 0.4f));
     
     glm::mat4 groundModel = glm::mat4(1.0f);
-    groundModel = glm::translate(groundModel, glm::vec3(0.0f, -0.5f, 0.0f));
+    groundModel = glm::translate(groundModel, glm::vec3(0.0f, -0.75f, 0.0f));
     groundModel = glm::scale(groundModel, glm::vec3(10.0f, 0.1f, 10.0f));
     shader->setMat4("model", groundModel);
     texturedCube->draw();

@@ -95,6 +95,9 @@ private:
     std::shared_ptr<CMaterial> material;
     std::shared_ptr<CMesh> triangleMesh;
     std::shared_ptr<CMesh> texturedCube;
+    std::shared_ptr<CMesh> sphereMesh;      // 球体
+    std::shared_ptr<CMesh> cylinderMesh;    // 圆柱体
+    std::shared_ptr<CMesh> coneMesh;        // 圆锥体
     std::vector<std::shared_ptr<CMesh>> modelMeshes;
     
     // 纹理
