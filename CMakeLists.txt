@@ -41,7 +41,30 @@ file(GLOB MAIN_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 add_executable(opengl_demo ${MAIN_SOURCE} ${LIB_SOURCES})
 
 # 设置包含目录
-target_include_directories(opengl_demo PRIVATE ${OPENGL_INCLUDE_DIR})
+target_include_directories(opengl_demo PRIVATE ${COMMON_INCLUDE_DIRS})
+
+# 链接库（FetchContent 目标）
+target_link_libraries(opengl_demo
+    ${OPENGL_LIBRARIES}
+    glfw
+    glm::glm
+)
+
+# 平台特定链接
+if(APPLE)
+    target_link_libraries(opengl_demo
+        "-framework Cocoa"
+        "-framework IOKit"
+        "-framework CoreVideo"
+    )
+elseif(UNIX AND NOT APPLE)
+    target_link_libraries(opengl_demo
+        -ldl
+        -lpthread
+    )
+elseif(WIN32)
+    target_link_libraries(opengl_demo opengl32)
+endif()
 
 # 复制资源到构建目录
 add_custom_command(TARGET opengl_demo POST_BUILD
@@ -50,9 +73,6 @@ add_custom_command(TARGET opengl_demo POST_BUILD
     ${CMAKE_CURRENT_BINARY_DIR}/resources
     COMMENT "Copying resources to build directory"
 )
-
-# 链接平台库
-target_link_libraries(opengl_demo ${PLATFORM_LIBRARIES})
 
 # ============================================================================
 # 测试配置

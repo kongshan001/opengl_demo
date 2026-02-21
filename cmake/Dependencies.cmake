@@ -7,21 +7,37 @@ set(OpenGL_GL_PREFERENCE GLVND)
 # 查找 OpenGL
 find_package(OpenGL REQUIRED)
 
+# ============================================================================
+# FetchContent - 自动下载依赖
+# ============================================================================
+include(FetchContent)
+
+# 下载 GLFW
+FetchContent_Declare(
+    glfw
+    GIT_REPOSITORY https://github.com/glfw/glfw.git
+    GIT_TAG        3.3.8
+)
+FetchContent_MakeAvailable(glfw)
+
+# 下载 GLM
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG        0.9.9.8
+)
+FetchContent_MakeAvailable(glm)
+
 # 设置包含目录
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm
 )
-
-# 设置库目录
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/third_party/lib)
 
 # 公共包含目录
 set(COMMON_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm
     ${OPENGL_INCLUDE_DIR}
 )
 
