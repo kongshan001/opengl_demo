@@ -11,7 +11,9 @@ enum class CameraMovement {
     Forward,
     Backward,
     Left,
-    Right
+    Right,
+    Up,
+    Down
 };
 
 /**

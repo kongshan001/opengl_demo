@@ -49,6 +49,13 @@ bool Application::initWindow() {
     glfwMakeContextCurrent(window);
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+    
+    // 注册鼠标回调
+    glfwSetCursorPosCallback(window, mouseCallback);
+    glfwSetScrollCallback(window, scrollCallback);
+    
+    // 捕获鼠标
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     return true;
 }
@@ -162,6 +169,23 @@ void Application::run() {
         processInput();
         render();
 
+        // FPS 计算
+        frameCount++;
+        fpsTimer += deltaTime;
+        if (fpsTimer >= 1.0f) {
+            currentFPS = frameCount / fpsTimer;
+            float frameTime = 1000.0f / currentFPS;
+            std::string title = config.title + 
+                " | FPS: " + std::to_string(static_cast<int>(currentFPS)) +
+                " | Frame: " + std::to_string(static_cast<int>(frameTime)) + "ms";
+            if (isPaused) {
+                title += " [PAUSED]";
+            }
+            glfwSetWindowTitle(window, title.c_str());
+            frameCount = 0;
+            fpsTimer = 0.0f;
+        }
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -181,6 +205,7 @@ void Application::processInput() {
         return;
     }
 
+    // WASD + QE 移动控制
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.processKeyboard(CameraMovement::Forward, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -189,6 +214,37 @@ void Application::processInput() {
         camera.processKeyboard(CameraMovement::Left, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.processKeyboard(CameraMovement::Right, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+        camera.processKeyboard(CameraMovement::Down, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+        camera.processKeyboard(CameraMovement::Up, deltaTime);
+    
+    // 空格键暂停/继续 (使用按键释放检测，避免连续触发)
+    static bool spacePressed = false;
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !spacePressed) {
+        spacePressed = true;
+        isPaused = !isPaused;
+        if (isPaused) {
+            pausedTime = glfwGetTime();
+        } else {
+            // 恢复时调整 lastFrame 避免时间跳跃
+            lastFrame = glfwGetTime();
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE) {
+        spacePressed = false;
+    }
+    
+    // R 键重置摄像机
+    static bool rPressed = false;
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !rPressed) {
+        rPressed = true;
+        camera.setPosition(glm::vec3(0.0f, 0.0f, 4.0f));
+        camera.setMovementSpeed(2.5f);
+    }
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) {
+        rPressed = false;
+    }
 }
 
 void Application::updateDeltaTime() {
@@ -232,20 +288,46 @@ void Application::setGlobalUniforms() {
 void Application::renderScene() {
     if (!shader) return;
 
-    glm::mat4 model = glm::mat4(1.0f);
+    // 获取当前时间（暂停时使用暂停时间）
+    float currentTime = isPaused ? pausedTime : (float)glfwGetTime();
 
-    // 只渲染居中的纹理立方体，缓慢旋转
-    if (texturedCube && diffuseTexture) {
-        shader->setInt("hasDiffuseTexture", 1);
-        glActiveTexture(GL_TEXTURE0);
-        diffuseTexture->bind(0);
+    shader->setInt("hasDiffuseTexture", 1);
+    glActiveTexture(GL_TEXTURE0);
+    diffuseTexture->bind(0);
 
-        // 立方体居中，缓慢绕 Y 轴旋转 (0.3x 速度)
-        glm::mat4 cubeModel = glm::rotate(model, (float)glfwGetTime() * 0.3f,
-                                          glm::vec3(0.0f, 1.0f, 0.0f));
-        shader->setMat4("model", cubeModel);
+    // 渲染多个立方体，不同位置和颜色
+    struct CubeInfo {
+        glm::vec3 position;
+        float rotationSpeed;
+        glm::vec3 color;  // 用于区分
+    };
+    
+    CubeInfo cubes[] = {
+        { glm::vec3( 0.0f,  0.0f,  0.0f), 0.3f, glm::vec3(1.0f, 1.0f, 1.0f) },
+        { glm::vec3( 2.0f,  0.0f, -1.0f), 0.5f, glm::vec3(1.0f, 0.8f, 0.8f) },
+        { glm::vec3(-2.0f,  0.0f, -1.0f), 0.2f, glm::vec3(0.8f, 1.0f, 0.8f) },
+        { glm::vec3( 0.0f,  1.5f, -2.0f), 0.4f, glm::vec3(0.8f, 0.8f, 1.0f) }
+    };
+    
+    for (const auto& cube : cubes) {
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, cube.position);
+        model = glm::rotate(model, currentTime * cube.rotationSpeed,
+                           glm::vec3(0.5f, 1.0f, 0.3f));
+        shader->setMat4("model", model);
+        shader->setVec3("materialDiffuse", cube.color);
         texturedCube->draw();
     }
+    
+    // 渲染地面（一个大平面）
+    shader->setInt("hasDiffuseTexture", 0);
+    shader->setVec3("materialDiffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+    
+    glm::mat4 groundModel = glm::mat4(1.0f);
+    groundModel = glm::translate(groundModel, glm::vec3(0.0f, -0.5f, 0.0f));
+    groundModel = glm::scale(groundModel, glm::vec3(10.0f, 0.1f, 10.0f));
+    shader->setMat4("model", groundModel);
+    texturedCube->draw();
 }
 
 void Application::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
@@ -254,5 +336,31 @@ void Application::framebufferSizeCallback(GLFWwindow* window, int width, int hei
         app->config.width = width;
         app->config.height = height;
         glViewport(0, 0, width, height);
+    }
+}
+
+void Application::mouseCallback(GLFWwindow* window, double xpos, double ypos) {
+    Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+    if (!app) return;
+    
+    if (app->firstMouse) {
+        app->lastMouseX = static_cast<float>(xpos);
+        app->lastMouseY = static_cast<float>(ypos);
+        app->firstMouse = false;
+    }
+    
+    float xoffset = static_cast<float>(xpos) - app->lastMouseX;
+    float yoffset = app->lastMouseY - static_cast<float>(ypos);  // 反转Y轴
+    
+    app->lastMouseX = static_cast<float>(xpos);
+    app->lastMouseY = static_cast<float>(ypos);
+    
+    app->camera.processMouseMovement(xoffset, yoffset);
+}
+
+void Application::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    Application* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+    if (app) {
+        app->camera.processMouseScroll(static_cast<float>(yoffset));
     }
 }

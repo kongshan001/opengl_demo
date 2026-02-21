@@ -151,6 +151,30 @@ private:
      * @brief GLFW 帧缓冲大小回调
      */
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
+    
+    /**
+     * @brief GLFW 鼠标移动回调
+     */
+    static void mouseCallback(GLFWwindow* window, double xpos, double ypos);
+    
+    /**
+     * @brief GLFW 鼠标滚轮回调
+     */
+    static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+    
+    // 鼠标控制状态
+    bool firstMouse = true;
+    float lastMouseX = 400.0f;
+    float lastMouseY = 300.0f;
+    
+    // FPS 计算
+    int frameCount = 0;
+    float fpsTimer = 0.0f;
+    float currentFPS = 0.0f;
+    
+    // 动画控制
+    bool isPaused = false;
+    float pausedTime = 0.0f;
 };
 
 #endif
