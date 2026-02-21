@@ -92,7 +92,8 @@ TEST(ShaderUniformCacheTest, CachedLocationReuse) {
     // 需要 OpenGL 上下文
 }
 
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
+// main 函数由测试框架提供
+// int main(int argc, char** argv) {
+//     ::testing::InitGoogleTest(&argc, argv);
+//     return RUN_ALL_TESTS();
+// }
