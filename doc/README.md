@@ -5,12 +5,21 @@
 ## 📚 文档结构
 
 ### API文档 (`doc/api/`)
-- [CMesh API](api/CMesh.md) - 网格管理系统API参考
+
+**核心模块**
+- [Camera API](api/Camera.md) - 相机控制API参考
+- [Application API](api/Application.md) - 应用程序主类API参考
+
+**着色器与网格**
 - [CShader API](api/CShader.md) - 着色器管理API参考
+- [CMesh API](api/CMesh.md) - 网格管理系统API参考
 - [CMaterial API](api/CMaterial.md) - 材质系统API参考
 - [CTexture API](api/CTexture.md) - 纹理管理API参考
 - [CModelLoader API](api/CModelLoader.md) - 模型加载API参考
 - [MeshUtils API](api/MeshUtils.md) - 几何体工具API参考
+
+### 架构设计
+- [架构设计文档](architecture.md) - 模块结构、类职责、数据流
 
 ### 教程 (`doc/tutorial/`)
 - [快速入门](tutorial/getting-started.md) - 从零开始使用OpenGL Demo

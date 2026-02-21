@@ -1,6 +1,9 @@
 # Dependencies.cmake
 # 配置项目依赖项
 
+# 使用 GLVND 而非 legacy GL (消除 CMP0072 警告)
+set(OpenGL_GL_PREFERENCE GLVND)
+
 # 查找 OpenGL
 find_package(OpenGL REQUIRED)
 
@@ -24,6 +27,7 @@ set(COMMON_INCLUDE_DIRS
 
 # 收集库源文件
 file(GLOB_RECURSE LIB_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/mesh/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/shader/*.cpp"
 )
