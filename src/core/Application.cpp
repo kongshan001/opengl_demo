@@ -202,6 +202,24 @@ void Application::processInput() {
     if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) {
         rPressed = false;
     }
+    
+    // 数字键切换显示模式
+    if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS) displayMode = 0;
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) displayMode = 1;
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) displayMode = 2;
+    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) displayMode = 3;
+    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) displayMode = 4;
+    
+    // 5 键切换线框模式
+    static bool key5Pressed = false;
+    if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS && !key5Pressed) {
+        key5Pressed = true;
+        wireframeMode = !wireframeMode;
+        glPolygonMode(GL_FRONT_AND_BACK, wireframeMode ? GL_LINE : GL_FILL);
+    }
+    if (glfwGetKey(window, GLFW_KEY_5) == GLFW_RELEASE) {
+        key5Pressed = false;
+    }
 }
 
 void Application::updateDeltaTime() {
@@ -259,17 +277,21 @@ void Application::renderScene() {
         glm::vec3 color;
         float rotationSpeed;
         float scale;
+        int id;  // 用于显示模式过滤
     };
     
     std::vector<GeometryInfo> geometries = {
-        { texturedCube,  glm::vec3(-2.5f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 0.8f), 0.3f, 0.8f },  // 立方体
-        { sphereMesh,    glm::vec3( 0.0f, 0.0f, 0.0f), glm::vec3(0.8f, 1.0f, 0.8f), 0.5f, 1.0f },  // 球体
-        { cylinderMesh,  glm::vec3( 2.5f, 0.0f, 0.0f), glm::vec3(0.8f, 0.8f, 1.0f), 0.4f, 1.0f },  // 圆柱体
-        { coneMesh,      glm::vec3( 0.0f, 1.5f,-2.0f), glm::vec3(1.0f, 1.0f, 0.8f), 0.6f, 1.0f }   // 圆锥体
+        { texturedCube,  glm::vec3(-2.5f, 0.0f, 0.0f), glm::vec3(1.0f, 0.8f, 0.8f), 0.3f, 0.8f, 1 },  // 立方体
+        { sphereMesh,    glm::vec3( 0.0f, 0.0f, 0.0f), glm::vec3(0.8f, 1.0f, 0.8f), 0.5f, 1.0f, 2 },  // 球体
+        { cylinderMesh,  glm::vec3( 2.5f, 0.0f, 0.0f), glm::vec3(0.8f, 0.8f, 1.0f), 0.4f, 1.0f, 3 },  // 圆柱体
+        { coneMesh,      glm::vec3( 0.0f, 1.5f,-2.0f), glm::vec3(1.0f, 1.0f, 0.8f), 0.6f, 1.0f, 4 }   // 圆锥体
     };
     
     for (const auto& geo : geometries) {
         if (!geo.mesh) continue;
+        
+        // 根据 displayMode 过滤
+        if (displayMode != 0 && displayMode != geo.id) continue;
         
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, geo.position);
@@ -281,15 +303,17 @@ void Application::renderScene() {
         geo.mesh->draw();
     }
     
-    // 渲染地面（一个大平面）
-    shader->setInt("hasDiffuseTexture", 0);
-    shader->setVec3("materialDiffuse", glm::vec3(0.35f, 0.35f, 0.4f));
-    
-    glm::mat4 groundModel = glm::mat4(1.0f);
-    groundModel = glm::translate(groundModel, glm::vec3(0.0f, -0.75f, 0.0f));
-    groundModel = glm::scale(groundModel, glm::vec3(10.0f, 0.1f, 10.0f));
-    shader->setMat4("model", groundModel);
-    texturedCube->draw();
+    // 地面只在显示全部时渲染
+    if (displayMode == 0) {
+        shader->setInt("hasDiffuseTexture", 0);
+        shader->setVec3("materialDiffuse", glm::vec3(0.35f, 0.35f, 0.4f));
+        
+        glm::mat4 groundModel = glm::mat4(1.0f);
+        groundModel = glm::translate(groundModel, glm::vec3(0.0f, -0.75f, 0.0f));
+        groundModel = glm::scale(groundModel, glm::vec3(10.0f, 0.1f, 10.0f));
+        shader->setMat4("model", groundModel);
+        texturedCube->draw();
+    }
 }
 
 void Application::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
