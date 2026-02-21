@@ -92,12 +92,14 @@ private:
     
     // 资源
     std::shared_ptr<CShader> shader;
+    std::shared_ptr<CShader> lightShader;  // 光源着色器
     std::shared_ptr<CMaterial> material;
     std::shared_ptr<CMesh> triangleMesh;
     std::shared_ptr<CMesh> texturedCube;
     std::shared_ptr<CMesh> sphereMesh;      // 球体
     std::shared_ptr<CMesh> cylinderMesh;    // 圆柱体
     std::shared_ptr<CMesh> coneMesh;        // 圆锥体
+    std::shared_ptr<CMesh> lightIndicator;  // 光源指示器
     std::vector<std::shared_ptr<CMesh>> modelMeshes;
     
     // 纹理
@@ -178,6 +180,10 @@ private:
     // 动画控制
     bool isPaused = false;
     float pausedTime = 0.0f;
+    
+    // 光源
+    glm::vec3 lightPos = glm::vec3(2.0f, 3.0f, 2.0f);
+    glm::vec3 lightColor = glm::vec3(1.0f, 0.95f, 0.9f);
     
     // 显示模式 (0=全部, 1=立方体, 2=球体, 3=圆柱体, 4=圆锥体)
     int displayMode = 0;

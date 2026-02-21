@@ -72,11 +72,17 @@ bool Application::initOpenGL() {
 }
 
 void Application::initScene() {
-    // 创建着色器（使用简化纹理着色器）
+    // 创建着色器（使用 Phong 光照着色器）
     try {
         shader = std::make_shared<CShader>(
             std::string("resources/shaders/mesh.vs"),
-            std::string("resources/shaders/texture_simple.fs")
+            std::string("resources/shaders/phong.fs")
+        );
+        
+        // 光源着色器
+        lightShader = std::make_shared<CShader>(
+            std::string("resources/shaders/mesh.vs"),
+            std::string("resources/shaders/light_source.fs")
         );
     } catch (const ShaderException& e) {
         std::cerr << "Shader error: " << e.what() << std::endl;
@@ -118,6 +124,9 @@ void Application::initScene() {
     // 圆锥体
     coneMesh = MeshUtils::createCone(0.4f, 0.8f, 32);
     coneMesh->setMaterial(material);
+    
+    // 光源指示器（小球）
+    lightIndicator = MeshUtils::createSphere(0.1f, 16);
 }
 
 void Application::run() {
@@ -256,8 +265,21 @@ void Application::setGlobalUniforms() {
         shader->setInt("diffuseTexture", 0);
     }
     
-    // 设置材质颜色（无纹理时使用）
-    shader->setVec3("materialDiffuse", material->diffuseColor);
+    // 设置材质（Phong 光照）
+    shader->setVec3("material.ambient", material->ambientColor);
+    shader->setVec3("material.diffuse", material->diffuseColor);
+    shader->setVec3("material.specular", material->specularColor);
+    shader->setFloat("material.shininess", material->shininess);
+    
+    // 设置光源（Phong 光照）
+    shader->setVec3("light.position", lightPos);
+    shader->setVec3("light.color", lightColor);
+    shader->setFloat("light.ambientStrength", 0.15f);
+    shader->setFloat("light.diffuseStrength", 0.7f);
+    shader->setFloat("light.specularStrength", 1.0f);
+    
+    // 设置观察位置（用于镜面反射）
+    shader->setVec3("viewPos", camera.getPosition());
 }
 
 void Application::renderScene() {
@@ -299,20 +321,37 @@ void Application::renderScene() {
                            glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::scale(model, glm::vec3(geo.scale));
         shader->setMat4("model", model);
-        shader->setVec3("materialDiffuse", geo.color);
+        // 为每个几何体设置不同的材质颜色
+        shader->setVec3("material.diffuse", geo.color);
+        shader->setVec3("material.ambient", geo.color * 0.3f);
         geo.mesh->draw();
     }
     
     // 地面只在显示全部时渲染
     if (displayMode == 0) {
         shader->setInt("hasDiffuseTexture", 0);
-        shader->setVec3("materialDiffuse", glm::vec3(0.35f, 0.35f, 0.4f));
+        shader->setVec3("material.diffuse", glm::vec3(0.35f, 0.35f, 0.4f));
+        shader->setVec3("material.ambient", glm::vec3(0.1f, 0.1f, 0.12f));
+        shader->setVec3("material.specular", glm::vec3(0.2f, 0.2f, 0.2f));
         
         glm::mat4 groundModel = glm::mat4(1.0f);
         groundModel = glm::translate(groundModel, glm::vec3(0.0f, -0.75f, 0.0f));
         groundModel = glm::scale(groundModel, glm::vec3(10.0f, 0.1f, 10.0f));
         shader->setMat4("model", groundModel);
         texturedCube->draw();
+    }
+    
+    // 渲染光源指示器
+    if (lightShader && lightIndicator) {
+        lightShader->use();
+        lightShader->setMat4("view", camera.getViewMatrix());
+        lightShader->setMat4("projection", camera.getProjectionMatrix(config.width, config.height));
+        lightShader->setVec3("lightColor", lightColor);
+        
+        glm::mat4 lightModel = glm::mat4(1.0f);
+        lightModel = glm::translate(lightModel, lightPos);
+        lightShader->setMat4("model", lightModel);
+        lightIndicator->draw();
     }
 }
 

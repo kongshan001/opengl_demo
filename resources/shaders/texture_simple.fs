@@ -8,6 +8,8 @@ out vec4 FragColor;
 uniform sampler2D diffuseTexture;
 uniform bool hasDiffuseTexture;
 uniform vec3 materialDiffuse;
+uniform vec3 lightPos;
+uniform vec3 lightColor;
 
 void main() {
     vec3 color;
@@ -17,13 +19,16 @@ void main() {
         color = materialDiffuse;
     }
     
-    // 简单的光照：只用法线和方向光
-    vec3 lightDir = normalize(vec3(0.5, 1.0, 0.8));
+    // 方向光（从 lightPos 方向照射）
+    vec3 lightDir = normalize(lightPos);
     vec3 norm = normalize(Normal);
     float diff = max(dot(norm, lightDir), 0.0);
     
     // 基础亮度 + 漫反射
-    float brightness = 0.4 + 0.6 * diff;
+    float brightness = 0.3 + 0.7 * diff;
     
-    FragColor = vec4(color * brightness, 1.0);
+    // 应用光照颜色
+    vec3 result = color * brightness * lightColor;
+    
+    FragColor = vec4(result, 1.0);
 }
