@@ -21,7 +21,7 @@ struct AppConfig {
     std::string shaderVertex = "resources/shaders/mesh.vs";
     std::string shaderFragment = "resources/shaders/mesh.fs";
     std::string modelPath = "resources/models/cube.obj";
-    glm::vec3 backgroundColor = glm::vec3(0.2f, 0.3f, 0.3f);
+    glm::vec3 backgroundColor = glm::vec3(0.3f, 0.35f, 0.4f);  // 浅灰蓝色背景
 };
 
 /**

@@ -6,7 +6,7 @@
 Application::Application(const AppConfig& config)
     : config(config),
       window(nullptr),
-      camera(glm::vec3(0.0f, 0.0f, 3.0f)),
+      camera(glm::vec3(0.0f, 0.0f, 4.0f)),  // 摄像机后退，确保立方体完整可见
       deltaTime(0.0f),
       lastFrame(0.0f) {
 }
@@ -64,11 +64,11 @@ bool Application::initOpenGL() {
 }
 
 void Application::initScene() {
-    // 创建着色器（使用纹理着色器）
+    // 创建着色器（使用简化纹理着色器）
     try {
         shader = std::make_shared<CShader>(
             std::string("resources/shaders/mesh.vs"),
-            std::string("resources/shaders/texture.fs")
+            std::string("resources/shaders/texture_simple.fs")
         );
     } catch (const ShaderException& e) {
         std::cerr << "Shader error: " << e.what() << std::endl;
@@ -214,27 +214,19 @@ void Application::setGlobalUniforms() {
     shader->setMat4("view", camera.getViewMatrix());
     shader->setMat4("projection",
         camera.getProjectionMatrix(config.width, config.height));
-    shader->setVec3("lightPos", glm::vec3(1.2f, 1.0f, 2.0f));
-    shader->setVec3("viewPos", camera.getPosition());
-
-    // 设置材质属性
-    shader->setVec3("material.diffuse", material->diffuseColor);
-    shader->setVec3("material.specular", material->specularColor);
-    shader->setVec3("material.ambient", material->ambientColor);
-    shader->setFloat("material.shininess", material->shininess);
-    shader->setFloat("material.specularStrength", material->specularStrength);
-    shader->setFloat("material.opacity", material->opacity);
 
     // 设置纹理
     bool hasDiffuse = diffuseTexture != nullptr;
     shader->setInt("hasDiffuseTexture", hasDiffuse ? 1 : 0);
-    shader->setInt("hasSpecularTexture", 0);
 
     if (hasDiffuse) {
         glActiveTexture(GL_TEXTURE0);
         diffuseTexture->bind(0);
         shader->setInt("diffuseTexture", 0);
     }
+    
+    // 设置材质颜色（无纹理时使用）
+    shader->setVec3("materialDiffuse", material->diffuseColor);
 }
 
 void Application::renderScene() {
@@ -248,8 +240,8 @@ void Application::renderScene() {
         glActiveTexture(GL_TEXTURE0);
         diffuseTexture->bind(0);
 
-        // 立方体居中，缓慢绕 Y 轴旋转
-        glm::mat4 cubeModel = glm::rotate(model, (float)glfwGetTime() * 0.5f,
+        // 立方体居中，缓慢绕 Y 轴旋转 (0.3x 速度)
+        glm::mat4 cubeModel = glm::rotate(model, (float)glfwGetTime() * 0.3f,
                                           glm::vec3(0.0f, 1.0f, 0.0f));
         shader->setMat4("model", cubeModel);
         texturedCube->draw();
