@@ -147,6 +147,175 @@ std::shared_ptr<CMesh> MeshUtils::createPlane(float width, float height, unsigne
     return mesh;
 }
 
+std::shared_ptr<CMesh> MeshUtils::createCylinder(float radius, float height, unsigned int segments) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+    
+    float halfHeight = height * 0.5f;
+    float angleStep = 2.0f * M_PI / segments;
+    
+    // 侧面顶点
+    for (unsigned int i = 0; i <= segments; ++i) {
+        float angle = i * angleStep;
+        float x = std::cos(angle) * radius;
+        float z = std::sin(angle) * radius;
+        float u = (float)i / segments;
+        
+        // 底部顶点
+        Vertex bottom;
+        bottom.position = glm::vec3(x, -halfHeight, z);
+        bottom.normal = glm::vec3(std::cos(angle), 0.0f, std::sin(angle));
+        bottom.texCoords = glm::vec2(u, 1.0f);
+        vertices.push_back(bottom);
+        
+        // 顶部顶点
+        Vertex top;
+        top.position = glm::vec3(x, halfHeight, z);
+        top.normal = glm::vec3(std::cos(angle), 0.0f, std::sin(angle));
+        top.texCoords = glm::vec2(u, 0.0f);
+        vertices.push_back(top);
+    }
+    
+    // 侧面索引
+    for (unsigned int i = 0; i < segments; ++i) {
+        unsigned int bottomLeft = i * 2;
+        unsigned int topLeft = i * 2 + 1;
+        unsigned int bottomRight = (i + 1) * 2;
+        unsigned int topRight = (i + 1) * 2 + 1;
+        
+        indices.push_back(bottomLeft);
+        indices.push_back(topLeft);
+        indices.push_back(bottomRight);
+        
+        indices.push_back(bottomRight);
+        indices.push_back(topLeft);
+        indices.push_back(topRight);
+    }
+    
+    // 底面圆盘
+    unsigned int bottomCenterIdx = vertices.size();
+    Vertex bottomCenter;
+    bottomCenter.position = glm::vec3(0.0f, -halfHeight, 0.0f);
+    bottomCenter.normal = glm::vec3(0.0f, -1.0f, 0.0f);
+    bottomCenter.texCoords = glm::vec2(0.5f, 0.5f);
+    vertices.push_back(bottomCenter);
+    
+    for (unsigned int i = 0; i <= segments; ++i) {
+        float angle = i * angleStep;
+        Vertex v;
+        v.position = glm::vec3(std::cos(angle) * radius, -halfHeight, std::sin(angle) * radius);
+        v.normal = glm::vec3(0.0f, -1.0f, 0.0f);
+        v.texCoords = glm::vec2(std::cos(angle) * 0.5f + 0.5f, std::sin(angle) * 0.5f + 0.5f);
+        vertices.push_back(v);
+    }
+    
+    for (unsigned int i = 0; i < segments; ++i) {
+        indices.push_back(bottomCenterIdx);
+        indices.push_back(bottomCenterIdx + i + 2);
+        indices.push_back(bottomCenterIdx + i + 1);
+    }
+    
+    // 顶面圆盘
+    unsigned int topCenterIdx = vertices.size();
+    Vertex topCenter;
+    topCenter.position = glm::vec3(0.0f, halfHeight, 0.0f);
+    topCenter.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+    topCenter.texCoords = glm::vec2(0.5f, 0.5f);
+    vertices.push_back(topCenter);
+    
+    for (unsigned int i = 0; i <= segments; ++i) {
+        float angle = i * angleStep;
+        Vertex v;
+        v.position = glm::vec3(std::cos(angle) * radius, halfHeight, std::sin(angle) * radius);
+        v.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+        v.texCoords = glm::vec2(std::cos(angle) * 0.5f + 0.5f, std::sin(angle) * 0.5f + 0.5f);
+        vertices.push_back(v);
+    }
+    
+    for (unsigned int i = 0; i < segments; ++i) {
+        indices.push_back(topCenterIdx);
+        indices.push_back(topCenterIdx + i + 1);
+        indices.push_back(topCenterIdx + i + 2);
+    }
+    
+    auto mesh = std::make_shared<CMesh>(vertices, indices);
+    mesh->calculateBoundingBox();
+    return mesh;
+}
+
+std::shared_ptr<CMesh> MeshUtils::createCone(float radius, float height, unsigned int segments) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+    
+    float halfHeight = height * 0.5f;
+    float angleStep = 2.0f * M_PI / segments;
+    
+    // 侧面顶点（尖端在顶部）
+    for (unsigned int i = 0; i <= segments; ++i) {
+        float angle = i * angleStep;
+        float x = std::cos(angle) * radius;
+        float z = std::sin(angle) * radius;
+        float u = (float)i / segments;
+        
+        // 底部顶点
+        Vertex bottom;
+        bottom.position = glm::vec3(x, -halfHeight, z);
+        // 计算侧面法线
+        glm::vec3 sideNormal = glm::normalize(glm::vec3(radius, height / 2.0f, 0.0f));
+        float cosA = std::cos(angle);
+        float sinA = std::sin(angle);
+        bottom.normal = glm::normalize(glm::vec3(sideNormal.x * cosA, sideNormal.y, sideNormal.x * sinA));
+        bottom.texCoords = glm::vec2(u, 1.0f);
+        vertices.push_back(bottom);
+        
+        // 顶部尖端（共享多个顶点）
+        Vertex apex;
+        apex.position = glm::vec3(0.0f, halfHeight, 0.0f);
+        apex.normal = bottom.normal;  // 每个顶点有自己的法线朝向
+        apex.texCoords = glm::vec2(u, 0.0f);
+        vertices.push_back(apex);
+    }
+    
+    // 侧面索引
+    for (unsigned int i = 0; i < segments; ++i) {
+        unsigned int bottomLeft = i * 2;
+        unsigned int apexLeft = i * 2 + 1;
+        unsigned int bottomRight = (i + 1) * 2;
+        unsigned int apexRight = (i + 1) * 2 + 1;
+        
+        indices.push_back(bottomLeft);
+        indices.push_back(apexLeft);
+        indices.push_back(bottomRight);
+    }
+    
+    // 底面圆盘
+    unsigned int bottomCenterIdx = vertices.size();
+    Vertex bottomCenter;
+    bottomCenter.position = glm::vec3(0.0f, -halfHeight, 0.0f);
+    bottomCenter.normal = glm::vec3(0.0f, -1.0f, 0.0f);
+    bottomCenter.texCoords = glm::vec2(0.5f, 0.5f);
+    vertices.push_back(bottomCenter);
+    
+    for (unsigned int i = 0; i <= segments; ++i) {
+        float angle = i * angleStep;
+        Vertex v;
+        v.position = glm::vec3(std::cos(angle) * radius, -halfHeight, std::sin(angle) * radius);
+        v.normal = glm::vec3(0.0f, -1.0f, 0.0f);
+        v.texCoords = glm::vec2(std::cos(angle) * 0.5f + 0.5f, std::sin(angle) * 0.5f + 0.5f);
+        vertices.push_back(v);
+    }
+    
+    for (unsigned int i = 0; i < segments; ++i) {
+        indices.push_back(bottomCenterIdx);
+        indices.push_back(bottomCenterIdx + i + 2);
+        indices.push_back(bottomCenterIdx + i + 1);
+    }
+    
+    auto mesh = std::make_shared<CMesh>(vertices, indices);
+    mesh->calculateBoundingBox();
+    return mesh;
+}
+
 // 顶点计算
 void MeshUtils::calculateNormals(std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices) {
     std::vector<glm::vec3> normals(vertices.size(), glm::vec3(0.0f));
