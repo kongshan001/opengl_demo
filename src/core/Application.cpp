@@ -242,23 +242,15 @@ void Application::renderScene() {
 
     glm::mat4 model = glm::mat4(1.0f);
 
-    // 渲染三角形（无纹理，在左侧）
-    if (triangleMesh) {
-        shader->setInt("hasDiffuseTexture", 0);
-        glm::mat4 triangleModel = glm::translate(model, glm::vec3(-1.5f, 0.0f, 0.0f));
-        shader->setMat4("model", triangleModel);
-        triangleMesh->draw();
-    }
-
-    // 渲染纹理立方体（在右侧，旋转）
+    // 只渲染居中的纹理立方体，缓慢旋转
     if (texturedCube && diffuseTexture) {
         shader->setInt("hasDiffuseTexture", 1);
         glActiveTexture(GL_TEXTURE0);
         diffuseTexture->bind(0);
 
-        glm::mat4 cubeModel = glm::translate(model, glm::vec3(1.5f, 0.0f, 0.0f));
-        cubeModel = glm::rotate(cubeModel, (float)glfwGetTime(),
-                                glm::vec3(0.5f, 1.0f, 0.0f));
+        // 立方体居中，缓慢绕 Y 轴旋转
+        glm::mat4 cubeModel = glm::rotate(model, (float)glfwGetTime() * 0.5f,
+                                          glm::vec3(0.0f, 1.0f, 0.0f));
         shader->setMat4("model", cubeModel);
         texturedCube->draw();
     }
