@@ -72,11 +72,11 @@ bool Application::initOpenGL() {
 }
 
 void Application::initScene() {
-    // 创建着色器（使用 Phong 光照着色器）
+    // 创建着色器（使用多光源着色器）
     try {
         shader = std::make_shared<CShader>(
             std::string("resources/shaders/mesh.vs"),
-            std::string("resources/shaders/phong.fs")
+            std::string("resources/shaders/multi_light.fs")
         );
         
         // 光源着色器
@@ -94,6 +94,13 @@ void Application::initScene() {
     material->setShader(shader);
     material->setColors(glm::vec3(1.0f), glm::vec3(0.5f), glm::vec3(0.1f));
     material->setProperties(32.0f, 0.5f);
+
+    // 初始化多光源
+    lights = {
+        { glm::vec3(3.0f, 2.0f, 3.0f), glm::vec3(1.0f, 0.9f, 0.9f), 0.5f, 4.0f, 2.0f, 0.0f, true },       // 白光
+        { glm::vec3(-3.0f, 2.5f, -3.0f), glm::vec3(0.3f, 0.5f, 1.0f), 0.7f, 5.0f, 2.5f, 2.094f, true },  // 蓝光
+        { glm::vec3(0.0f, 3.0f, -4.0f), glm::vec3(1.0f, 0.4f, 0.2f), 0.6f, 4.5f, 3.0f, 4.189f, true }    // 橙光
+    };
 
     // 加载纹理
     try {
@@ -281,14 +288,24 @@ void Application::setGlobalUniforms() {
     shader->setVec3("material.specular", material->specularColor);
     shader->setFloat("material.shininess", material->shininess);
     
-    // 设置光源（Phong 光照）
-    shader->setVec3("light.position", lightPos);
-    shader->setVec3("light.color", lightColor);
-    shader->setFloat("light.ambientStrength", 0.15f);
-    shader->setFloat("light.diffuseStrength", 0.7f);
-    shader->setFloat("light.specularStrength", 1.0f);
+    // 设置光源数量
+    shader->setInt("numLights", static_cast<int>(lights.size()));
     
-    // 设置观察位置（用于镜面反射）
+    // 设置每个光源的参数
+    for (size_t i = 0; i < lights.size() && i < 4; i++) {
+        std::string prefix = "lights[" + std::to_string(i) + "].";
+        shader->setVec3(prefix + "position", lights[i].position);
+        shader->setVec3(prefix + "color", lights[i].color);
+        shader->setFloat(prefix + "ambientStrength", 0.1f);
+        shader->setFloat(prefix + "diffuseStrength", 0.7f);
+        shader->setFloat(prefix + "specularStrength", 0.8f);
+        // 衰减参数
+        shader->setFloat(prefix + "constant", 1.0f);
+        shader->setFloat(prefix + "linear", 0.09f);
+        shader->setFloat(prefix + "quadratic", 0.032f);
+    }
+    
+    // 设置观察位置
     shader->setVec3("viewPos", camera.getPosition());
 }
 
@@ -298,15 +315,21 @@ void Application::renderScene() {
     // 获取当前时间（暂停时使用暂停时间）
     float currentTime = isPaused ? pausedTime : (float)glfwGetTime();
     
-    // 更新光源位置（圆形轨道）
+    // 更新所有光源位置（圆形轨道动画）
     if (lightAnimationEnabled) {
-        lightPos.x = sin(currentTime * lightOrbitSpeed) * lightOrbitRadius;
-        lightPos.z = cos(currentTime * lightOrbitSpeed) * lightOrbitRadius;
-        lightPos.y = lightOrbitHeight;
-        
-        // 更新光源 uniform
         shader->use();
-        shader->setVec3("light.position", lightPos);
+        for (size_t i = 0; i < lights.size() && i < 4; i++) {
+            if (lights[i].animated) {
+                float angle = currentTime * lights[i].orbitSpeed + lights[i].orbitPhase;
+                lights[i].position.x = sin(angle) * lights[i].orbitRadius;
+                lights[i].position.z = cos(angle) * lights[i].orbitRadius;
+                lights[i].position.y = lights[i].orbitHeight;
+                
+                // 更新 uniform
+                std::string prefix = "lights[" + std::to_string(i) + "].";
+                shader->setVec3(prefix + "position", lights[i].position);
+            }
+        }
     }
 
     shader->setInt("hasDiffuseTexture", 1);
@@ -362,17 +385,21 @@ void Application::renderScene() {
         texturedCube->draw();
     }
     
-    // 渲染光源指示器
+    // 渲染所有光源指示器
     if (lightShader && lightIndicator) {
         lightShader->use();
         lightShader->setMat4("view", camera.getViewMatrix());
         lightShader->setMat4("projection", camera.getProjectionMatrix(config.width, config.height));
-        lightShader->setVec3("lightColor", lightColor);
         
-        glm::mat4 lightModel = glm::mat4(1.0f);
-        lightModel = glm::translate(lightModel, lightPos);
-        lightShader->setMat4("model", lightModel);
-        lightIndicator->draw();
+        for (const auto& light : lights) {
+            lightShader->setVec3("lightColor", light.color);
+            
+            glm::mat4 lightModel = glm::mat4(1.0f);
+            lightModel = glm::translate(lightModel, light.position);
+            lightModel = glm::scale(lightModel, glm::vec3(0.15f));  // 稍大的光源指示器
+            lightShader->setMat4("model", lightModel);
+            lightIndicator->draw();
+        }
     }
 }
 
