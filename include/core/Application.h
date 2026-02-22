@@ -198,6 +198,7 @@ private:
     // 显示模式 (0=全部, 1=立方体, 2=球体, 3=圆柱体, 4=圆锥体)
     int displayMode = 0;
     bool wireframeMode = false;
+    bool showHelp = false;  // F1 帮助显示
 };
 
 #endif

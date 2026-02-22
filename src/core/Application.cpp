@@ -219,12 +219,24 @@ void Application::processInput() {
         rPressed = false;
     }
     
-    // 数字键切换显示模式
-    if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS) displayMode = 0;
-    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) displayMode = 1;
-    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) displayMode = 2;
-    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) displayMode = 3;
-    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) displayMode = 4;
+    // 数字键切换显示模式（使用按键释放检测）
+    static bool key0Pressed = false, key1Pressed = false, key2Pressed = false;
+    static bool key3Pressed = false, key4Pressed = false;
+    
+    if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS && !key0Pressed) { key0Pressed = true; displayMode = 0; }
+    if (glfwGetKey(window, GLFW_KEY_0) == GLFW_RELEASE) key0Pressed = false;
+    
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS && !key1Pressed) { key1Pressed = true; displayMode = 1; }
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_RELEASE) key1Pressed = false;
+    
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS && !key2Pressed) { key2Pressed = true; displayMode = 2; }
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_RELEASE) key2Pressed = false;
+    
+    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS && !key3Pressed) { key3Pressed = true; displayMode = 3; }
+    if (glfwGetKey(window, GLFW_KEY_3) == GLFW_RELEASE) key3Pressed = false;
+    
+    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS && !key4Pressed) { key4Pressed = true; displayMode = 4; }
+    if (glfwGetKey(window, GLFW_KEY_4) == GLFW_RELEASE) key4Pressed = false;
     
     // 5 键切换线框模式
     static bool key5Pressed = false;
@@ -245,6 +257,26 @@ void Application::processInput() {
     }
     if (glfwGetKey(window, GLFW_KEY_L) == GLFW_RELEASE) {
         lPressed = false;
+    }
+    
+    // F1 显示帮助
+    static bool f1Pressed = false;
+    if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS && !f1Pressed) {
+        f1Pressed = true;
+        showHelp = !showHelp;
+        if (showHelp) {
+            std::cout << "\n========== 控制说明 ==========\n"
+                      << "移动: W/A/S/D/Q/E\n"
+                      << "视角: 鼠标移动 | 缩放: 滚轮\n"
+                      << "空格: 暂停/继续 | R: 重置摄像机\n"
+                      << "0-4: 切换显示模式 | 5: 线框模式\n"
+                      << "L: 光源动画 | F1: 帮助\n"
+                      << "ESC: 退出\n"
+                      << "=============================\n" << std::endl;
+        }
+    }
+    if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_RELEASE) {
+        f1Pressed = false;
     }
 }
 
