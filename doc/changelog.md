@@ -1,233 +1,147 @@
-# 项目迭代日志
+# 变更日志
 
-本文档记录项目的持续迭代过程，包括时间、问题背景、原因分析和解决方案。
+本文档记录项目的所有重要变更。
 
----
+## [Unreleased]
 
-## 2026-02-20
+### 新增
 
-### Material-Shader 集成重构
+### 改进
 
-**问题**：材质和着色器分离，渲染时需要外部管理 shader 状态，不符合商业引擎设计模式。
+### 修复
 
-**背景**：
-- 原 `CMaterial::apply(CShader& shader)` 需要外部传入 shader
-- 渲染流程：外部设置 shader → 外部设置材质 → 绘制
-- Unity/Unreal 等引擎中 Material 持有 Shader 引用
+### 移除
 
-**原因**：
-- 设计初期未考虑完整的渲染管线架构
-- 缺乏对商业引擎设计模式的研究
+## [2026-02-22]
 
-**方案**：
-```cpp
-// Material 现在持有 shader
-class CMaterial {
-    std::shared_ptr<CShader> shader;
-public:
-    void setShader(std::shared_ptr<CShader> shader);
-    void apply() const;  // 使用内置 shader
-    void applyToShader(CShader& shader) const;  // 兼容接口
-};
+### 新增
 
-// CMesh::draw() 自动使用 Material 的 shader
-void CMesh::draw() const {
-    if (material && material->hasShader()) {
-        material->apply();
-    }
-    // ... 绑定并绘制
-}
-```
+**REQ-024: 视锥体剔除 (Performance)**
+- 添加 Frustum 类处理视锥体计算
+- 支持 AABB 包围盒剔除
+- 实时统计剔除率和性能数据
+- ImGui 中显示剔除统计
+- 可开关视锥体剔除功能
 
-**效果**：
-- 内聚性提升：一个 Material 对象完整描述渲染状态
-- 易用性提升：`mesh.setMaterial(material); mesh.draw();` 即可
-- Shader 仍可被多个 Material 共享（shared_ptr）
+**REQ-023: 场景序列化**
+- 创建 SceneSerializer 类处理 JSON 序列化
+- 支持保存/加载场景配置（光源、显示、摄像机）
+- 添加 nlohmann/json 依赖
+- Ctrl+S 保存场景，Ctrl+O 加载场景
+- 文件菜单支持保存/加载/退出
 
----
+**REQ-022: 多纹理支持**
+- multi_light.fs 支持漫反射、镜面反射、法线贴图
+- Application 加载镜面反射纹理
+- 添加纹理控制 ImGui 窗口
+- 支持 3 个纹理单元（TEXTURE0-2）
+- 镜面反射强度可纹理控制
 
-### Google Test 单元测试框架集成
+**REQ-021: 新几何体**
+- MeshUtils::createTorus() - 圆环生成
+- MeshUtils::createCapsule() - 胶囊体生成
+- 支持自定义半径、高度、细分段数
+- 正确的法线和纹理坐标计算
 
-**问题**：项目缺乏自动化测试，代码质量保障不足。
+**REQ-020: ImGui 调试界面**
+- 集成 Dear ImGui (docking 分支)
+- 添加性能统计窗口（FPS、帧时间）
+- 添加光源控制窗口（实时调整参数）
+- 添加菜单栏（窗口和显示菜单）
+- Tab 键切换 UI 显示
+- 使用 FetchContent 自动下载 ImGui
 
-**背景**：
-- 项目规模逐渐增大（CMesh, CMaterial, CTexture, CModelLoader 等模块）
-- 每次修改后需要手动验证
-- 缺乏回归测试能力
+**REQ-019: 键盘快捷键改进**
+- 数字键使用按键释放检测，避免连续触发
+- 添加 F1 帮助显示（控制台输出）
+- 更新 README 添加 F1 说明
 
-**原因**：
-- 初期为快速原型开发，未考虑测试
-- C++ 项目测试框架选型未确定
+**REQ-018: 多光源支持**
+- 创建 multi_light.fs 多光源着色器
+- 支持 4 个点光源同时照射
+- 实现距离衰减 (constant/linear/quadratic)
+- 3 个不同颜色的光源 (白/蓝/橙)
+- 各光源独立轨道旋转动画
+- 更新 README 光源说明
 
-**方案**：
-- 集成 Google Test 1.14.0
-- 创建 `tests/` 目录存放测试文件
-- CMake 集成 CTest 自动发现测试
-- 编写 Vertex 和 Material 的单元测试（20 个测试用例）
+**REQ-017: 动态光源旋转动画**
+- 光源围绕场景圆形轨道旋转
+- 添加 L 键切换光源动画开关
+- 可配置轨道半径、高度、速度
+- 更新 README 控制说明
 
-```bash
-# 运行测试
-cd build && ./opengl_tests
+**REQ-016: 完整 Phong 光照模型**
+- 创建 phong.fs 着色器（环境光 + 漫反射 + 镜面反射）
+- 更新 Application 使用 Phong 光照
+- 添加 Material 和 Light 结构体 uniform
+- 为每个几何体设置不同的材质属性
+- 22 个相关测试全部通过
 
-# 运行特定测试
-./opengl_tests --gtest_filter=MaterialTest.*
-```
+## [2026-02-21]
 
-**效果**：
-- 20 个测试全部通过
-- 可持续集成支持
-- 回归测试能力
+### 新增
 
----
+**REQ-011 ~ REQ-015**
+- REQ-011: Camera 和 CMesh 扩展单元测试
+- REQ-012: 添加圆柱体和圆锥体生成
+- REQ-013: 展示多种几何体（立方体、球体、圆柱体、圆锥体）
+- REQ-014: 添加数字键切换显示模式和线框模式
+- REQ-015: 添加控制说明到 README
 
-### CMake 模块化重构
+### 改进
 
-**问题**：CMakeLists.txt 文件逐渐变大，职责不清晰。
+- 使用 FetchContent 自动下载 GLFW 和 GLM
+- 添加架构文档和核心类职责文档
+- 修复顶点属性步长错误
 
-**背景**：
-- 原 CMakeLists.txt 约 80 行
-- 依赖配置、平台配置、测试配置混在一起
-- 难以维护和扩展
+### 提交记录
 
-**原因**：
-- 初期项目简单，单一文件足够
-- 随功能增加未及时重构
+- `test: 添加 Camera 和 CMesh 扩展单元测试 (REQ-011)`
+- `feat(mesh): 添加圆柱体和圆锥体生成 (REQ-012)`
+- `feat(scene): 展示多种几何体（立方体、球体、圆柱体、圆锥体）(REQ-013)`
+- `feat(input): 添加数字键切换显示模式和线框模式 (REQ-014)`
+- `docs: 添加控制说明到 README (REQ-015)`
+- `docs: 添加架构文档和核心类职责文档`
 
-**方案**：
-```
-cmake/
-├── Dependencies.cmake   # OpenGL 查找、包含目录、源文件收集
-├── Platform.cmake       # 平台特定链接库配置
-└── Testing.cmake        # Google Test 集成
+## [2026-02-20]
 
-CMakeLists.txt           # 主配置文件（约 50 行）
-```
+### 修复
 
-```cmake
-# CMakeLists.txt 核心结构
-include(Dependencies)
-include(Platform)
-# ... 主可执行文件配置 ...
-include(Testing)
-```
+**代码审查问题修复**
+- Shader 错误处理（抛异常而非静默失败）
+- 修复 CMake CMP0072 警告
+- ModelLoader 使用智能指针
+- 缓存 uniform location
+- 完善 API 文档（Doxygen 注释）
 
-**效果**：
-- 职责分离，易于维护
-- 新增平台/依赖只需修改对应模块
-- 主配置文件简洁清晰
+### 新增
 
----
+**REQ-001 ~ REQ-010**
+- REQ-001: 改进纹理立方体渲染效果
+- REQ-002 ~ REQ-010: 多角色协作系统迭代
 
-## 2026-02-10
+### 技术改进
 
-### CMesh 模块化系统构建
+- 多角色协作系统设计
+- 创建 4 个角色 Skill（product-owner, developer, code-reviewer, qa-engineer）
+- 创建 multi-agent-workflow 协作流程文档
+- 完整验证 Multi-Agent 协作流程
 
-**问题**：原有代码仅有简单三角形渲染，无法支持复杂 3D 模型。
+## 版本说明
 
-**背景**：
-- 原项目结构简单（仅 CShader 和 main.cpp）
-- 缺乏网格、材质、纹理等核心模块
-- 无法加载外部模型文件
+### 版本号规则
 
-**原因**：
-- 项目定位从简单 demo 转向完整渲染框架
-- 需要支持更复杂的渲染场景
+遵循 [语义化版本](https://semver.org/lang/zh-CN/)：
+- 主版本号：不兼容的 API 修改
+- 次版本号：向下兼容的功能性新增
+- 修订号：向下兼容的问题修正
 
-**方案**：
-- 创建 5 个核心模块：CMesh, CTexture, CMaterial, CModelLoader, MeshUtils
-- 添加 GLM 数学库和 stb_image 纹理库
-- 实现 OBJ 格式模型加载
-- 创建 resources/ 目录管理着色器、纹理、模型
+### 发布计划
 
-```
-include/mesh/
-├── Vertex.h
-├── Mesh.h
-├── Material.h
-├── Texture.h
-├── ModelLoader.h
-└── MeshUtils.h
-```
+当前处于 **开发阶段**，尚未发布正式版本。
 
-**效果**：
-- 完整的网格管理能力
-- 支持 OBJ 模型加载
-- 可扩展的材质/纹理系统
+### 未来计划
 
----
-
-## 2026-02-04
-
-### Python 版本移除
-
-**问题**：同时维护 Python 和 C++ 两个版本，精力分散。
-
-**背景**：
-- 项目最初有 Python (PyGame + PyOpenGL) 和 C++ 两个实现
-- Python 版本使用 OpenGL 1.2 旧版着色器
-- C++ 版本使用 OpenGL 3.3 Core Profile 现代管线
-
-**原因**：
-- 目标是学习现代 OpenGL，C++ 版本更合适
-- 维护两个版本增加工作量
-- Python 版本功能受限
-
-**方案**：
-- 删除 `opengl_demo.py` 和 `requirements.txt`
-- 专注于 C++ 版本开发
-- 更新文档反映新架构
-
-**效果**：
-- 开发精力集中
-- 代码库更清晰
-- 专注于现代 OpenGL
-
----
-
-## 2026-02-01
-
-### 项目初始化
-
-**问题**：需要学习现代 OpenGL 渲染技术。
-
-**背景**：
-- 学习 OpenGL 的需求
-- 需要一个可编译运行的起点项目
-
-**原因**：
-- 系统学习图形编程
-- 理解渲染管线
-
-**方案**：
-- 创建基础项目结构
-- 集成 GLFW (窗口管理) 和 GLAD (OpenGL 加载器)
-- 实现简单三角形渲染
-- 同时提供 Python 和 C++ 两个版本
-
-**效果**：
-- 可编译运行的 OpenGL 3.3 Core Profile 项目
-- 跨平台支持 (macOS/Linux/Windows)
-- 清晰的项目结构
-
----
-
-## 迭代原则
-
-1. **渐进式改进**：每次迭代解决一个明确的问题
-2. **保持向后兼容**：添加兼容接口，不破坏现有代码
-3. **文档同步**：每次迭代更新相关文档
-4. **测试保障**：新功能添加对应单元测试
-5. **模块化设计**：职责分离，易于维护和扩展
-
----
-
-## 未来计划
-
-| 优先级 | 功能 | 状态 |
-|--------|------|------|
-| 高 | 鼠标控制相机 | 待开发 |
-| 高 | 修复 Mesh.cpp 指针转换警告 | 待处理 |
-| 中 | 高级光照着色器 (Phong/Blinn-Phong) | 待开发 |
-| 中 | 纹理加载和渲染示例 | 待开发 |
-| 低 | 更多模型格式支持 (glTF) | 待评估 |
-| 低 | 更多单元测试覆盖 | 待开发 |
+- v1.0.0: 核心功能稳定版
+- v1.1.0: 后期处理（Bloom、FXAA）
+- v2.0.0: 物理引擎集成

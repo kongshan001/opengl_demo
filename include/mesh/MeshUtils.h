@@ -15,6 +15,8 @@ public:
     static std::shared_ptr<CMesh> createPlane(float width = 1.0f, float height = 1.0f, unsigned int widthSegments = 1, unsigned int heightSegments = 1);
     static std::shared_ptr<CMesh> createCylinder(float radius = 1.0f, float height = 1.0f, unsigned int segments = 32);
     static std::shared_ptr<CMesh> createCone(float radius = 1.0f, float height = 1.0f, unsigned int segments = 32);
+    static std::shared_ptr<CMesh> createTorus(float outerRadius = 1.0f, float innerRadius = 0.5f, unsigned int sides = 32, unsigned int rings = 32);
+    static std::shared_ptr<CMesh> createCapsule(float radius = 1.0f, float height = 1.0f, unsigned int segments = 32);
     
     // 顶点计算
     static void calculateNormals(std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);

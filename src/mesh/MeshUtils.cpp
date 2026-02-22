@@ -420,3 +420,196 @@ std::shared_ptr<CMesh> MeshUtils::mergeMeshes(const std::vector<std::shared_ptr<
     mergedMesh->calculateBoundingBox();
     return mergedMesh;
 }
+
+// 圆环生成
+std::shared_ptr<CMesh> MeshUtils::createTorus(float outerRadius, float innerRadius, unsigned int sides, unsigned int rings) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+    
+    float tubeRadius = (outerRadius - innerRadius) * 0.5f;
+    float ringRadius = innerRadius + tubeRadius;
+    
+    // 生成顶点
+    for (unsigned int ring = 0; ring <= rings; ring++) {
+        float theta = static_cast<float>(ring) / rings * 2.0f * M_PI;
+        
+        for (unsigned int side = 0; side <= sides; side++) {
+            float phi = static_cast<float>(side) / sides * 2.0f * M_PI;
+            
+            // 计算位置
+            float x = (ringRadius + tubeRadius * cos(phi)) * cos(theta);
+            float y = tubeRadius * sin(phi);
+            float z = (ringRadius + tubeRadius * cos(phi)) * sin(theta);
+            
+            // 计算法线
+            float nx = cos(phi) * cos(theta);
+            float ny = sin(phi);
+            float nz = cos(phi) * sin(theta);
+            
+            // 计算纹理坐标
+            float u = static_cast<float>(ring) / rings;
+            float v = static_cast<float>(side) / sides;
+            
+            vertices.push_back(Vertex(
+                glm::vec3(x, y, z),
+                glm::vec3(nx, ny, nz),
+                glm::vec2(u, v)
+            ));
+        }
+    }
+    
+    // 生成索引
+    for (unsigned int ring = 0; ring < rings; ring++) {
+        for (unsigned int side = 0; side < sides; side++) {
+            unsigned int current = ring * (sides + 1) + side;
+            unsigned int next = current + sides + 1;
+            
+            // 两个三角形组成一个四边形
+            indices.push_back(current);
+            indices.push_back(next);
+            indices.push_back(current + 1);
+            
+            indices.push_back(current + 1);
+            indices.push_back(next);
+            indices.push_back(next + 1);
+        }
+    }
+    
+    auto mesh = std::make_shared<CMesh>(vertices, indices);
+    mesh->calculateBoundingBox();
+    return mesh;
+}
+
+// 胶囊体生成
+std::shared_ptr<CMesh> MeshUtils::createCapsule(float radius, float height, unsigned int segments) {
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+    
+    float halfHeight = height * 0.5f;
+    unsigned int rings = segments / 2;  // 每个半球的环数
+    
+    // 生成上半球
+    for (unsigned int ring = 0; ring <= rings; ring++) {
+        float theta = static_cast<float>(ring) / rings * M_PI * 0.5f;  // 0 到 PI/2
+        
+        for (unsigned int seg = 0; seg <= segments; seg++) {
+            float phi = static_cast<float>(seg) / segments * 2.0f * M_PI;
+            
+            float x = radius * sin(theta) * cos(phi);
+            float y = halfHeight + radius * cos(theta);
+            float z = radius * sin(theta) * sin(phi);
+            
+            float nx = sin(theta) * cos(phi);
+            float ny = cos(theta);
+            float nz = sin(theta) * sin(phi);
+            
+            float u = static_cast<float>(seg) / segments;
+            float v = static_cast<float>(ring) / rings;
+            
+            vertices.push_back(Vertex(
+                glm::vec3(x, y, z),
+                glm::vec3(nx, ny, nz),
+                glm::vec2(u, v)
+            ));
+        }
+    }
+    
+    // 生成圆柱体中间部分
+    unsigned int cylinderTopIndex = vertices.size();
+    for (unsigned int ring = 0; ring <= 1; ring++) {
+        float y = halfHeight - (static_cast<float>(ring) * height);
+        
+        for (unsigned int seg = 0; seg <= segments; seg++) {
+            float phi = static_cast<float>(seg) / segments * 2.0f * M_PI;
+            
+            float x = radius * cos(phi);
+            float z = radius * sin(phi);
+            
+            float u = static_cast<float>(seg) / segments;
+            float v = 0.5f;
+            
+            vertices.push_back(Vertex(
+                glm::vec3(x, y, z),
+                glm::vec3(cos(phi), 0.0f, sin(phi)),
+                glm::vec2(u, v)
+            ));
+        }
+    }
+    
+    // 生成下半球
+    unsigned int bottomHemisphereStart = vertices.size();
+    for (unsigned int ring = 0; ring <= rings; ring++) {
+        float theta = M_PI * 0.5f + static_cast<float>(ring) / rings * M_PI * 0.5f;  // PI/2 到 PI
+        
+        for (unsigned int seg = 0; seg <= segments; seg++) {
+            float phi = static_cast<float>(seg) / segments * 2.0f * M_PI;
+            
+            float x = radius * sin(theta) * cos(phi);
+            float y = -halfHeight + radius * cos(theta);
+            float z = radius * sin(theta) * sin(phi);
+            
+            float nx = sin(theta) * cos(phi);
+            float ny = cos(theta);
+            float nz = sin(theta) * sin(phi);
+            
+            float u = static_cast<float>(seg) / segments;
+            float v = static_cast<float>(ring) / rings;
+            
+            vertices.push_back(Vertex(
+                glm::vec3(x, y, z),
+                glm::vec3(nx, ny, nz),
+                glm::vec2(u, v)
+            ));
+        }
+    }
+    
+    // 生成上半球索引
+    for (unsigned int ring = 0; ring < rings; ring++) {
+        for (unsigned int seg = 0; seg < segments; seg++) {
+            unsigned int current = ring * (segments + 1) + seg;
+            unsigned int next = current + segments + 1;
+            
+            indices.push_back(current);
+            indices.push_back(next);
+            indices.push_back(current + 1);
+            
+            indices.push_back(current + 1);
+            indices.push_back(next);
+            indices.push_back(next + 1);
+        }
+    }
+    
+    // 生成圆柱体中间部分索引
+    for (unsigned int seg = 0; seg < segments; seg++) {
+        unsigned int current = cylinderTopIndex + seg;
+        unsigned int next = current + segments + 1;
+        
+        indices.push_back(current);
+        indices.push_back(next);
+        indices.push_back(current + 1);
+        
+        indices.push_back(current + 1);
+        indices.push_back(next);
+        indices.push_back(next + 1);
+    }
+    
+    // 生成下半球索引
+    for (unsigned int ring = 0; ring < rings; ring++) {
+        for (unsigned int seg = 0; seg < segments; seg++) {
+            unsigned int current = bottomHemisphereStart + ring * (segments + 1) + seg;
+            unsigned int next = current + segments + 1;
+            
+            indices.push_back(current);
+            indices.push_back(next);
+            indices.push_back(current + 1);
+            
+            indices.push_back(current + 1);
+            indices.push_back(next);
+            indices.push_back(next + 1);
+        }
+    }
+    
+    auto mesh = std::make_shared<CMesh>(vertices, indices);
+    mesh->calculateBoundingBox();
+    return mesh;
+}
