@@ -7,6 +7,7 @@
 #include <string>
 #include "core/Camera.h"
 #include "core/SceneSerializer.h"
+#include "core/Frustum.h"
 #include "shader/Shader.h"
 #include "mesh/Mesh.h"
 #include "mesh/Material.h"
@@ -218,6 +219,12 @@ private:
     // 动画控制
     bool isPaused = false;
     float pausedTime = 0.0f;
+    
+    // 视锥体剔除
+    Frustum frustum;
+    bool enableFrustumCulling = true;
+    int culledObjects = 0;    // 被剔除的对象数量
+    int totalObjects = 0;       // 总对象数量
     
     // 光源（使用 SceneSerializer 中定义的 LightSource）
     std::vector<LightSource> lights;

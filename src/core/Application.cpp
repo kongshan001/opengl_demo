@@ -421,6 +421,15 @@ void Application::renderScene() {
     // 获取当前时间（暂停时使用暂停时间）
     float currentTime = isPaused ? pausedTime : (float)glfwGetTime();
     
+    // 更新视锥体
+    glm::mat4 viewProjection = camera.getProjectionMatrix(config.width, config.height) * 
+                              camera.getViewMatrix();
+    frustum.update(viewProjection);
+    
+    // 重置剔除统计
+    totalObjects = 0;
+    culledObjects = 0;
+    
     // 更新所有光源位置（圆形轨道动画）
     if (lightAnimationEnabled) {
         shader->use();
@@ -465,11 +474,29 @@ void Application::renderScene() {
         // 根据 displayMode 过滤
         if (displayMode != 0 && displayMode != geo.id) continue;
         
+        // 计算变换矩阵
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, geo.position);
         model = glm::rotate(model, currentTime * geo.rotationSpeed,
                            glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::scale(model, glm::vec3(geo.scale));
+        
+        // 视锥体剔除
+        totalObjects++;
+        if (enableFrustumCulling) {
+            const auto& bbox = geo.mesh->getBoundingBox();
+            
+            // 应用变换后的包围盒
+            // 简化：只检测位置和缩放后的包围盒（不考虑旋转）
+            glm::vec3 min = bbox.min * geo.scale + geo.position;
+            glm::vec3 max = bbox.max * geo.scale + geo.position;
+            
+            if (!frustum.containsBox(min, max)) {
+                culledObjects++;
+                continue;  // 不在视锥体内，跳过
+            }
+        }
+        
         shader->setMat4("model", model);
         // 为每个几何体设置不同的材质颜色
         shader->setVec3("material.diffuse", geo.color);
@@ -614,7 +641,16 @@ void Application::renderImGui() {
         ImGui::Begin("性能统计", &showStatsWindow);
         ImGui::Text("FPS: %.1f", currentFPS);
         ImGui::Text("Frame Time: %.3f ms", 1000.0f / currentFPS);
+        ImGui::Separator();
         ImGui::Text("光源数量: %zu", lights.size());
+        ImGui::Text("总对象数: %d", totalObjects);
+        ImGui::Text("已剔除: %d", culledObjects);
+        if (totalObjects > 0) {
+            float cullRate = (float)culledObjects / totalObjects * 100.0f;
+            ImGui::Text("剔除率: %.1f%%", cullRate);
+        }
+        ImGui::Separator();
+        ImGui::Checkbox("启用视锥体剔除", &enableFrustumCulling);
         ImGui::End();
     }
     
