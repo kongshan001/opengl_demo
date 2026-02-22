@@ -3,6 +3,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "mesh/ModelLoader.h"
 #include "mesh/MeshUtils.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 Application::Application(const AppConfig& config)
     : config(config),
@@ -13,6 +16,7 @@ Application::Application(const AppConfig& config)
 }
 
 Application::~Application() {
+    shutdownImGui();
     if (window) {
         glfwDestroyWindow(window);
         glfwTerminate();
@@ -28,6 +32,7 @@ bool Application::initialize() {
         return false;
     }
 
+    initImGui();
     initScene();
     return true;
 }
@@ -270,13 +275,23 @@ void Application::processInput() {
                       << "视角: 鼠标移动 | 缩放: 滚轮\n"
                       << "空格: 暂停/继续 | R: 重置摄像机\n"
                       << "0-4: 切换显示模式 | 5: 线框模式\n"
-                      << "L: 光源动画 | F1: 帮助\n"
+                      << "L: 光源动画 | F1: 帮助 | Tab: UI 开关\n"
                       << "ESC: 退出\n"
                       << "=============================\n" << std::endl;
         }
     }
     if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_RELEASE) {
         f1Pressed = false;
+    }
+    
+    // Tab 键切换 ImGui 显示
+    static bool tabPressed = false;
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && !tabPressed) {
+        tabPressed = true;
+        showImGui = !showImGui;
+    }
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE) {
+        tabPressed = false;
     }
 }
 
@@ -294,6 +309,10 @@ void Application::render() {
 
     setGlobalUniforms();
     renderScene();
+    
+    if (showImGui) {
+        renderImGui();
+    }
 }
 
 void Application::setGlobalUniforms() {
@@ -468,4 +487,95 @@ void Application::scrollCallback(GLFWwindow* window, double xoffset, double yoff
     if (app) {
         app->camera.processMouseScroll(static_cast<float>(yoffset));
     }
+}
+
+void Application::initImGui() {
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    
+    // 设置 ImGui 样式
+    ImGui::StyleColorsDark();
+    
+    // 初始化 GLFW/OpenGL3 后端
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+    
+    std::cout << "ImGui initialized successfully" << std::endl;
+}
+
+void Application::shutdownImGui() {
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+}
+
+void Application::renderImGui() {
+    // 开始新帧
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    
+    // 主菜单栏（需要在新帧开始后立即创建）
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("窗口")) {
+            ImGui::MenuItem("性能统计", nullptr, &showStatsWindow);
+            ImGui::MenuItem("光源控制", nullptr, &showLightWindow);
+            ImGui::Separator();
+            ImGui::MenuItem("显示 UI", nullptr, &showImGui);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("显示")) {
+            if (ImGui::MenuItem("全部")) displayMode = 0;
+            if (ImGui::MenuItem("立方体")) displayMode = 1;
+            if (ImGui::MenuItem("球体")) displayMode = 2;
+            if (ImGui::MenuItem("圆柱体")) displayMode = 3;
+            if (ImGui::MenuItem("圆锥体")) displayMode = 4;
+            ImGui::Separator();
+            ImGui::MenuItem("线框模式", nullptr, &wireframeMode);
+            glPolygonMode(GL_FRONT_AND_BACK, wireframeMode ? GL_LINE : GL_FILL);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+    
+    // 性能统计窗口
+    if (showStatsWindow) {
+        ImGui::Begin("性能统计", &showStatsWindow);
+        ImGui::Text("FPS: %.1f", currentFPS);
+        ImGui::Text("Frame Time: %.3f ms", 1000.0f / currentFPS);
+        ImGui::Text("光源数量: %zu", lights.size());
+        ImGui::End();
+    }
+    
+    // 光源控制窗口
+    if (showLightWindow) {
+        ImGui::Begin("光源控制", &showLightWindow);
+        ImGui::Checkbox("光源动画", &lightAnimationEnabled);
+        ImGui::Separator();
+        
+        for (size_t i = 0; i < lights.size(); i++) {
+            ImGui::PushID(i);
+            ImGui::Text("光源 %zu", i);
+            ImGui::ColorEdit3("颜色", &lights[i].color[0]);
+            ImGui::DragFloat3("位置", &lights[i].position[0], 0.1f);
+            ImGui::DragFloat("轨道半径", &lights[i].orbitRadius, 0.1f, 0.0f, 10.0f);
+            ImGui::DragFloat("轨道高度", &lights[i].orbitHeight, 0.1f, 0.0f, 10.0f);
+            ImGui::DragFloat("轨道速度", &lights[i].orbitSpeed, 0.05f, 0.0f, 5.0f);
+            ImGui::Checkbox("启用动画", &lights[i].animated);
+            ImGui::Separator();
+            ImGui::PopID();
+        }
+        ImGui::End();
+    }
+    
+    // ImGui Demo（调试用）- 需要手动启用
+    // if (showDemo) {
+    //     ImGui::ShowDemoWindow(&showDemo);
+    // }
+    
+    // 渲染 ImGui
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

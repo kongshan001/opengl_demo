@@ -28,10 +28,20 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
+# 下载 Dear ImGui
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG        docking
+)
+FetchContent_MakeAvailable(imgui)
+
 # 设置包含目录
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/include
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
 )
 
 # 公共包含目录
@@ -39,6 +49,8 @@ set(COMMON_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/include
     ${OPENGL_INCLUDE_DIR}
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
 )
 
 # 收集库源文件
@@ -46,6 +58,16 @@ file(GLOB_RECURSE LIB_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/mesh/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/shader/*.cpp"
+)
+
+# 添加 ImGui 源文件
+list(APPEND LIB_SOURCES
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
 # 添加 GLAD 源文件 (OpenGL loader)

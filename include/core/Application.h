@@ -11,6 +11,9 @@
 #include "mesh/Material.h"
 #include "mesh/Texture.h"
 
+// ImGui 前向声明
+struct ImGuiContext;
+
 /**
  * @brief 应用程序配置结构
  */
@@ -123,6 +126,16 @@ private:
     bool initOpenGL();
     
     /**
+     * @brief 初始化 ImGui
+     */
+    void initImGui();
+    
+    /**
+     * @brief 关闭 ImGui
+     */
+    void shutdownImGui();
+    
+    /**
      * @brief 初始化场景资源（着色器、材质、网格）
      */
     void initScene();
@@ -141,6 +154,11 @@ private:
      * @brief 渲染一帧
      */
     void render();
+    
+    /**
+     * @brief 渲染 ImGui 界面
+     */
+    void renderImGui();
     
     /**
      * @brief 设置全局 uniform
@@ -199,6 +217,12 @@ private:
     int displayMode = 0;
     bool wireframeMode = false;
     bool showHelp = false;  // F1 帮助显示
+    bool showImGui = true;  // 显示 ImGui 界面
+    bool showDemo = false;  // ImGui Demo 窗口
+    
+    // ImGui 相关
+    bool showLightWindow = true;  // 光源控制窗口
+    bool showStatsWindow = true;  // 性能统计窗口
 };
 
 #endif
