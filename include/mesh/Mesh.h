@@ -1,6 +1,17 @@
 #ifndef MESH_H
 #define MESH_H
 
+// Windows compatibility: disable min/max macros
+#ifdef _WIN32
+    #define NOMINMAX
+    #ifdef min
+        #undef min
+    #endif
+    #ifdef max
+        #undef max
+    #endif
+#endif
+
 #include <glad/glad.h>
 #include <vector>
 #include <memory>

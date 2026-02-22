@@ -10,6 +10,11 @@
 #include "mesh/Mesh.h"
 #include "mesh/Material.h"
 #include "mesh/Texture.h"
+#include "lighting/LightManager.h"
+#include "lighting/ShadowMapper.h"
+#include "particles/Particle.h"
+#include "particles/ParticleRenderer.h"
+#include "skybox/Skybox.h"
 
 /**
  * @brief 应用程序配置结构
@@ -101,6 +106,24 @@ private:
     std::shared_ptr<CTexture> diffuseTexture;
     std::shared_ptr<CTexture> specularTexture;
     
+    // 光照系统
+    LightManager lightManager;
+    std::shared_ptr<CShader> lightingShader;  // Dedicated lighting shader
+    std::shared_ptr<CShader> shadowShader;    // Shadow depth pass shader
+    std::unique_ptr<ShadowMapper> shadowMapper;
+    bool shadowsEnabled_ = true;
+    
+    // Particle system
+    std::unique_ptr<ParticleEmitter> particleEmitter_;
+    std::unique_ptr<ParticleRenderer> particleRenderer_;
+    int currentPreset_ = 0;
+    bool particlesEnabled_ = true;
+    
+    // Skybox system
+    std::unique_ptr<Skybox> skybox_;
+    int skyboxPreset_ = 0;
+    bool skyboxEnabled_ = true;
+    
     // 时间管理
     float deltaTime;
     float lastFrame;
@@ -118,12 +141,37 @@ private:
     bool initOpenGL();
     
     /**
-     * @brief 初始化场景资源（着色器、材质、网格）
+     * @brief Initialize scene resources (shaders, materials, meshes)
      */
     void initScene();
     
     /**
-     * @brief 处理输入
+     * @brief Initialize lighting system
+     */
+    void initLights();
+    
+    /**
+     * @brief Initialize particle system
+     */
+    void initParticles();
+    
+    /**
+     * @brief Cycle particle preset
+     */
+    void cycleParticlePreset();
+    
+    /**
+     * @brief Cycle skybox preset
+     */
+    void cycleSkyboxPreset();
+    
+    /**
+     * @brief Initialize skybox system
+     */
+    void initSkybox();
+    
+    /**
+     * @brief Process keyboard input
      */
     void processInput();
     
@@ -143,12 +191,32 @@ private:
     void setGlobalUniforms();
     
     /**
-     * @brief 渲染场景对象
+     * @brief Render scene objects
      */
     void renderScene();
     
     /**
-     * @brief GLFW 帧缓冲大小回调
+     * @brief Render scene without lighting (fallback)
+     */
+    void renderSimpleScene();
+    
+    /**
+     * @brief Render scene with multi-light support
+     */
+    void renderLitScene();
+    
+    /**
+     * @brief Render light position indicators
+     */
+    void renderLightIndicators();
+    
+    /**
+     * @brief Render shadow depth pass
+     */
+    void renderShadowPass();
+    
+    /**
+     * @brief GLFW framebuffer size callback
      */
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
     

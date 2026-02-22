@@ -1,5 +1,8 @@
-#include "mesh/MeshUtils.h"
+// Windows compatibility for M_PI
+#define _USE_MATH_DEFINES
 #include <cmath>
+
+#include "mesh/MeshUtils.h"
 #include <iostream>
 
 // 基础几何体生成

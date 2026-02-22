@@ -366,7 +366,158 @@ TEST_F(CameraTest, ExtremePosition) {
     EXPECT_FLOAT_EQ(pos.z, 10000.0f);
 }
 
-// main 函数由测试框架提供，不需要在每个测试文件中定义
+// ============================================================================
+// Camera Mode Tests (REQ-001)
+// ============================================================================
+
+TEST_F(CameraTest, DefaultModeIsFirstPerson) {
+    EXPECT_EQ(camera->getMode(), CameraMode::FirstPerson);
+}
+
+TEST_F(CameraTest, SetModeToThirdPerson) {
+    camera->setMode(CameraMode::ThirdPerson);
+    EXPECT_EQ(camera->getMode(), CameraMode::ThirdPerson);
+}
+
+TEST_F(CameraTest, SetModeToFreeFlight) {
+    camera->setMode(CameraMode::FreeFlight);
+    EXPECT_EQ(camera->getMode(), CameraMode::FreeFlight);
+}
+
+TEST_F(CameraTest, SetModeToOrbit) {
+    camera->setMode(CameraMode::Orbit);
+    EXPECT_EQ(camera->getMode(), CameraMode::Orbit);
+}
+
+TEST_F(CameraTest, CycleMode) {
+    EXPECT_EQ(camera->getMode(), CameraMode::FirstPerson);
+    
+    camera->cycleMode();
+    EXPECT_EQ(camera->getMode(), CameraMode::ThirdPerson);
+    
+    camera->cycleMode();
+    EXPECT_EQ(camera->getMode(), CameraMode::FreeFlight);
+    
+    camera->cycleMode();
+    EXPECT_EQ(camera->getMode(), CameraMode::Orbit);
+    
+    camera->cycleMode();
+    EXPECT_EQ(camera->getMode(), CameraMode::FirstPerson);  // Cycles back
+}
+
+TEST_F(CameraTest, GetModeName) {
+    EXPECT_STREQ(camera->getModeName(), "First Person");
+    
+    camera->setMode(CameraMode::ThirdPerson);
+    EXPECT_STREQ(camera->getModeName(), "Third Person");
+    
+    camera->setMode(CameraMode::FreeFlight);
+    EXPECT_STREQ(camera->getModeName(), "Free Flight");
+    
+    camera->setMode(CameraMode::Orbit);
+    EXPECT_STREQ(camera->getModeName(), "Orbit");
+}
+
+TEST_F(CameraTest, ThirdPersonTargetAndDistance) {
+    camera->setMode(CameraMode::ThirdPerson);
+    camera->setTarget(glm::vec3(1.0f, 2.0f, 3.0f));
+    camera->setOrbitDistance(10.0f);
+    
+    EXPECT_EQ(camera->getTarget(), glm::vec3(1.0f, 2.0f, 3.0f));
+    EXPECT_FLOAT_EQ(camera->getOrbitDistance(), 10.0f);
+}
+
+TEST_F(CameraTest, ThirdPersonOrbitsAroundTarget) {
+    camera->setMode(CameraMode::ThirdPerson);
+    camera->setTarget(glm::vec3(0.0f));
+    camera->setOrbitDistance(5.0f);
+    
+    // Mouse movement should rotate around target
+    glm::vec3 initialPos = camera->getPosition();
+    camera->processMouseMovement(100.0f, 0.0f);
+    glm::vec3 newPos = camera->getPosition();
+    
+    // Position should change
+    EXPECT_NE(initialPos, newPos);
+    
+    // Distance to target should remain approximately the same
+    float initialDist = glm::length(initialPos - camera->getTarget());
+    float newDist = glm::length(newPos - camera->getTarget());
+    EXPECT_NEAR(initialDist, newDist, 0.1f);
+}
+
+TEST_F(CameraTest, OrbitModeAutoRotate) {
+    camera->setMode(CameraMode::Orbit);
+    camera->setTarget(glm::vec3(0.0f));
+    camera->setOrbitDistance(5.0f);
+    camera->setAutoRotate(true);
+    camera->setAutoRotateSpeed(90.0f);  // 90 degrees per second
+    
+    EXPECT_TRUE(camera->isAutoRotate());
+    
+    glm::vec3 initialPos = camera->getPosition();
+    camera->update(1.0f);  // Update with 1 second
+    glm::vec3 newPos = camera->getPosition();
+    
+    // Position should change due to auto-rotation
+    EXPECT_NE(initialPos, newPos);
+}
+
+TEST_F(CameraTest, OrbitModeNoAutoRotate) {
+    camera->setMode(CameraMode::Orbit);
+    camera->setAutoRotate(false);
+    
+    EXPECT_FALSE(camera->isAutoRotate());
+    
+    glm::vec3 initialPos = camera->getPosition();
+    camera->update(1.0f);
+    glm::vec3 newPos = camera->getPosition();
+    
+    // Position should not change without auto-rotate
+    EXPECT_EQ(initialPos, newPos);
+}
+
+TEST_F(CameraTest, FreeFlightMovementFollowsView) {
+    camera->setMode(CameraMode::FreeFlight);
+    camera->setPosition(glm::vec3(0.0f));
+    camera->setYaw(0.0f);
+    camera->setPitch(45.0f);  // Look up
+    
+    glm::vec3 initialPos = camera->getPosition();
+    camera->processKeyboard(CameraMovement::Forward, 1.0f);
+    glm::vec3 newPos = camera->getPosition();
+    
+    // In free flight, forward should move in view direction (upward)
+    EXPECT_GT(newPos.y, initialPos.y);
+}
+
+TEST_F(CameraTest, ThirdPersonZoomChangesDistance) {
+    camera->setMode(CameraMode::ThirdPerson);
+    camera->setOrbitDistance(10.0f);
+    
+    camera->processMouseScroll(1.0f);  // Zoom in
+    
+    EXPECT_LT(camera->getOrbitDistance(), 10.0f);
+}
+
+TEST_F(CameraTest, ThirdPersonZoomClamped) {
+    camera->setMode(CameraMode::ThirdPerson);
+    camera->setOrbitDistance(5.0f);
+    
+    // Try to zoom too close
+    for (int i = 0; i < 100; i++) {
+        camera->processMouseScroll(10.0f);
+    }
+    EXPECT_GE(camera->getOrbitDistance(), 1.0f);
+    
+    // Try to zoom too far
+    for (int i = 0; i < 100; i++) {
+        camera->processMouseScroll(-10.0f);
+    }
+    EXPECT_LE(camera->getOrbitDistance(), 50.0f);
+}
+
+// main function is provided by the test framework
 // int main(int argc, char** argv) {
 //     ::testing::InitGoogleTest(&argc, argv);
 //     return RUN_ALL_TESTS();

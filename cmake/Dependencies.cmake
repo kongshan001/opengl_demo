@@ -46,6 +46,10 @@ file(GLOB_RECURSE LIB_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/mesh/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/shader/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/lighting/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/light/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/particles/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/skybox/*.cpp"
 )
 
 # 添加 GLAD 源文件 (OpenGL loader)
