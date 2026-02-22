@@ -35,8 +35,9 @@ bool Application::initWindow() {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    // 使用兼容模式，以便在更多环境中工作
+    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
     window = glfwCreateWindow(config.width, config.height,
                               config.title.c_str(), nullptr, nullptr);
@@ -123,7 +124,8 @@ void Application::initScene() {
     
     // Create material
     material = std::make_shared<CMaterial>("TexturedMaterial");
-    material->setShader(shader);
+    // 不设置材质的shader，让Mesh::draw()使用当前激活的shader（lightingShader）
+    // material->setShader(shader);  // 注释掉这行
     material->setColors(glm::vec3(1.0f), glm::vec3(0.5f), glm::vec3(0.1f));
     material->setProperties(32.0f, 0.5f);
 
@@ -185,6 +187,9 @@ void Application::initScene() {
 
     texturedCube = std::make_shared<CMesh>(cubeVertices, cubeIndices);
     texturedCube->setMaterial(material);
+    
+    std::cout << "Textured cube created with " << cubeVertices.size() 
+              << " vertices and " << cubeIndices.size() << " indices" << std::endl;
 
     // 创建简单三角形（无纹理）
     std::vector<Vertex> triangleVertices = {
@@ -472,9 +477,22 @@ void Application::render() {
     // Normal render pass
     glViewport(0, 0, config.width, config.height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    // 确保深度测试启用
+    glEnable(GL_DEPTH_TEST);
 
     setGlobalUniforms();
     renderScene();
+    
+    // 检查OpenGL错误
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        static bool errorOnce = true;
+        if (errorOnce) {
+            std::cout << "OpenGL error after render: " << err << std::endl;
+            errorOnce = false;
+        }
+    }
 }
 
 void Application::setGlobalUniforms() {
@@ -585,6 +603,8 @@ void Application::setGlobalUniforms() {
         shadowMapper->bindShadowMap(1);
         lightingShader->setInt("shadowMap", 1);
     } else {
+        // 即使阴影禁用，也需要设置lightSpaceMatrix，因为顶点着色器总是使用它
+        lightingShader->setMat4("lightSpaceMatrix", glm::mat4(1.0f));
         lightingShader->setInt("shadowsEnabled", 0);
     }
 }
@@ -646,9 +666,24 @@ void Application::renderLitScene() {
     float currentTime = isPaused ? pausedTime : (float)glfwGetTime();
 
     lightingShader->use();
-    lightingShader->setInt("hasDiffuseTexture", 1);
-    glActiveTexture(GL_TEXTURE0);
-    diffuseTexture->bind(0);
+    
+    // Debug: 检查着色器是否有效
+    static bool debugOnce = true;
+    if (debugOnce) {
+        std::cout << "renderLitScene called" << std::endl;
+        std::cout << "Camera position: " << camera.getPosition().x << ", " 
+                  << camera.getPosition().y << ", " << camera.getPosition().z << std::endl;
+        debugOnce = false;
+    }
+    
+    // 恢复纹理设置
+    bool hasDiffuse = diffuseTexture != nullptr;
+    lightingShader->setInt("hasDiffuseTexture", hasDiffuse ? 1 : 0);
+    if (hasDiffuse) {
+        glActiveTexture(GL_TEXTURE0);
+        diffuseTexture->bind(0);
+        lightingShader->setInt("diffuseTexture", 0);
+    }
 
     // Render cubes with lighting
     struct CubeInfo {
