@@ -9,29 +9,60 @@
 
 ## 特性
 
+### 渲染系统
 - **模块化架构**：清晰的项目结构，分离头文件、源文件和资源
+- **完整 Phong 光照**：环境光、漫反射、镜面反射
+- **多光源系统**：支持 4 个点光源，距离衰减
+- **动态光源**：光源轨道旋转动画
+- **多种几何体**：立方体、球体、圆柱体、圆锥体、圆环、胶囊体
+- **多纹理支持**：漫反射、镜面反射、法线贴图
+- **线框模式**：可切换线框/填充渲染
+
+### 交互和调试
+- **ImGui 调试界面**：性能统计、光源控制、纹理控制
+- **键盘控制**：WASD+QE 移动，鼠标视角，滚轮缩放
+- **显示模式**：可选择性显示不同几何体
+- **场景序列化**：JSON 格式保存/加载场景
+
+### 性能优化
 - **RAII 资源管理**：使用智能指针和异常安全保证
-- **异常处理**：完善的 `ShaderException` 和 `ModelLoadException` 错误处理
-- **性能优化**：Uniform location 缓存，避免重复 OpenGL 查询
+- **视锥体剔除**：剔除不在视野内的物体
+- **Uniform location 缓存**：避免重复 OpenGL 查询
+- **索引化顶点**：消除重复（OBJ 加载器）
+- **包围盒预计算**：加速碰撞检测
+
+### 跨平台和测试
 - **跨平台**：支持 macOS、Linux 和 Windows
-- **单元测试**：Google Test 测试框架集成
+- **异常处理**：完善的 `ShaderException` 和 `ModelLoadException` 错误处理
+- **单元测试**：Google Test 测试框架集成（103+ 测试）
+- **自动化构建**：使用 CMake 和 FetchContent 自动下载依赖
 
 ## 项目结构
 
 ```
 opengl_demo/
 ├── include/              # C++ 头文件
+│   ├── core/
+│   │   ├── Application.h      # 主应用类
+│   │   ├── Camera.h          # 摄像机控制
+│   │   ├── Frustum.h         # 视锥体剔除
+│   │   └── SceneSerializer.h # 场景序列化
 │   ├── shader/
-│   │   └── Shader.h      # CShader 类 + ShaderException
+│   │   └── Shader.h          # CShader 类 + ShaderException
 │   └── mesh/
-│       ├── Mesh.h        # CMesh 类（顶点、索引、包围盒）
-│       ├── Material.h    # CMaterial 材质系统
-│       ├── Texture.h     # CTexture 纹理加载
-│       ├── Vertex.h      # CVertex 顶点结构
-│       ├── MeshUtils.h   # 几何体生成工具
-│       └── ModelLoader.h # CModelLoader + ModelLoadException
+│       ├── Mesh.h            # CMesh 类（顶点、索引、包围盒）
+│       ├── Material.h        # CMaterial 材质系统
+│       ├── Texture.h         # CTexture 纹理加载
+│       ├── Vertex.h          # CVertex 顶点结构
+│       ├── MeshUtils.h       # 几何体生成工具
+│       └── ModelLoader.h     # CModelLoader + ModelLoadException
 ├── src/                  # C++ 源文件
-│   ├── main.cpp          # 主程序入口
+│   ├── main.cpp           # 主程序入口
+│   ├── core/
+│   │   ├── Application.cpp
+│   │   ├── Camera.cpp
+│   │   ├── Frustum.cpp
+│   │   └── SceneSerializer.cpp
 │   ├── shader/
 │   │   └── Shader.cpp
 │   └── mesh/
@@ -42,6 +73,10 @@ opengl_demo/
 │       └── ModelLoader.cpp
 ├── resources/            # 资源文件
 │   ├── shaders/          # GLSL 着色器
+│   │   ├── mesh.vs
+│   │   ├── phong.fs
+│   │   ├── multi_light.fs
+│   │   └── light_source.fs
 │   ├── textures/         # 纹理文件
 │   └── models/           # 3D 模型（OBJ 格式）
 ├── tests/                # 单元测试
@@ -49,9 +84,14 @@ opengl_demo/
 │   ├── test_material.cpp
 │   └── test_vertex.cpp
 ├── third_party/          # 第三方库
+│   └── src/
+│       └── glad.c        # OpenGL 加载器
 ├── doc/                  # 文档
 │   ├── api/              # API 参考
-│   └── examples/         # 示例代码
+│   ├── examples/         # 示例代码
+│   ├── changelog.md      # 变更日志
+│   ├── progress.md       # 开发进度
+│   └── todo.md          # TODO 列表
 ├── cmake/                # CMake 模块
 ├── CMakeLists.txt        # 构建配置
 └── README.md
@@ -235,20 +275,38 @@ std::exception
 
 | 组件 | 技术 |
 |------|------|
-| 窗口管理 | GLFW |
+| 窗口管理 | GLFW 3.3.8 |
 | OpenGL 加载 | GLAD |
-| 数学库 | GLM |
-| 构建系统 | CMake |
+| 数学库 | GLM 0.9.9.8 |
+| JSON 序列化 | nlohmann/json 3.11.3 |
+| 调试界面 | Dear ImGui (docking) |
+| 构建系统 | CMake 3.10+ |
 | 测试框架 | Google Test |
 | 图像加载 | stb_image |
 
+## 版本信息
+
+- **OpenGL**: 3.3 Core Profile
+- **GLSL**: 330
+- **C++**: 11/14
+- **CMake**: 3.10+
+- **当前版本**: v0.3.0-dev
+
 ## 文档
+
+### 快速导航
+
+- 📄 [变更日志](doc/changelog.md) - 项目的所有重要变更
+- 📊 [开发进度](doc/progress.md) - 已完成需求和功能统计
+- ✅ [TODO 列表](doc/todo.md) - 未来计划和待完成任务
+
+### 详细文档
 
 - [API 参考](doc/api/)
   - [CShader](doc/api/CShader.md)
   - [CMesh](doc/api/CMesh.md)
 - [测试指南](doc/testing.md)
-- [变更日志](doc/changelog.md)
+- [开发指南](CLAUDE.md)
 
 ## 开发指南
 
