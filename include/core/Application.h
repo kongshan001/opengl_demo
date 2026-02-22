@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include "core/Camera.h"
+#include "core/SceneSerializer.h"
 #include "shader/Shader.h"
 #include "mesh/Mesh.h"
 #include "mesh/Material.h"
@@ -74,6 +75,20 @@ public:
      * @brief 关闭应用程序
      */
     void close();
+    
+    /**
+     * @brief 保存当前场景
+     * @param filepath 文件路径
+     * @return true 保存成功
+     */
+    bool saveScene(const std::string& filepath = "scene.json");
+    
+    /**
+     * @brief 加载场景
+     * @param filepath 文件路径
+     * @return true 加载成功
+     */
+    bool loadScene(const std::string& filepath = "scene.json");
     
     /**
      * @brief 检查窗口是否应该关闭
@@ -204,17 +219,7 @@ private:
     bool isPaused = false;
     float pausedTime = 0.0f;
     
-    // 光源结构
-    struct LightSource {
-        glm::vec3 position;
-        glm::vec3 color;
-        float orbitSpeed;
-        float orbitRadius;
-        float orbitHeight;
-        float orbitPhase;
-        bool animated;
-    };
-    
+    // 光源（使用 SceneSerializer 中定义的 LightSource）
     std::vector<LightSource> lights;
     bool lightAnimationEnabled = true;
     

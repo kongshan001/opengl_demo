@@ -36,12 +36,21 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 
+# 下载 nlohmann/json
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG        v3.11.3
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
 # 设置包含目录
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/include
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
+    ${nlohmann_json_SOURCE_DIR}/include
 )
 
 # 公共包含目录
@@ -51,6 +60,7 @@ set(COMMON_INCLUDE_DIRS
     ${OPENGL_INCLUDE_DIR}
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
+    ${nlohmann_json_SOURCE_DIR}/include
 )
 
 # 收集库源文件

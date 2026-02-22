@@ -306,6 +306,28 @@ void Application::processInput() {
     if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE) {
         tabPressed = false;
     }
+    
+    // Ctrl+S 保存场景
+    static bool ctrlSPressed = false;
+    bool ctrlHeld = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+                    glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+    if (ctrlHeld && glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && !ctrlSPressed) {
+        ctrlSPressed = true;
+        saveScene();
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_RELEASE) {
+        ctrlSPressed = false;
+    }
+    
+    // Ctrl+O 加载场景
+    static bool ctrlOPressed = false;
+    if (ctrlHeld && glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS && !ctrlOPressed) {
+        ctrlOPressed = true;
+        loadScene();
+    }
+    if (glfwGetKey(window, GLFW_KEY_O) == GLFW_RELEASE) {
+        ctrlOPressed = false;
+    }
 }
 
 void Application::updateDeltaTime() {
@@ -552,6 +574,19 @@ void Application::renderImGui() {
     
     // 主菜单栏（需要在新帧开始后立即创建）
     if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("文件")) {
+            if (ImGui::MenuItem("保存场景", "Ctrl+S")) {
+                saveScene();
+            }
+            if (ImGui::MenuItem("加载场景", "Ctrl+O")) {
+                loadScene();
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("退出", "ESC")) {
+                close();
+            }
+            ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("窗口")) {
             ImGui::MenuItem("性能统计", nullptr, &showStatsWindow);
             ImGui::MenuItem("光源控制", nullptr, &showLightWindow);
@@ -639,4 +674,58 @@ void Application::renderImGui() {
     // 渲染 ImGui
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+bool Application::saveScene(const std::string& filepath) {
+    SceneConfig sceneConfig;
+    
+    // 保存光源
+    sceneConfig.lights = lights;
+    sceneConfig.lightAnimationEnabled = lightAnimationEnabled;
+    
+    // 保存显示设置
+    sceneConfig.displayMode = displayMode;
+    sceneConfig.wireframeMode = wireframeMode;
+    sceneConfig.isPaused = isPaused;
+    
+    // 保存背景
+    sceneConfig.backgroundColor = config.backgroundColor;
+    
+    // 保存摄像机
+    sceneConfig.cameraPosition = camera.getPosition();
+    sceneConfig.cameraFront = camera.getFront();
+    sceneConfig.cameraUp = camera.getUp();
+    sceneConfig.cameraZoom = camera.getZoom();
+    
+    return SceneSerializer::saveScene(sceneConfig, filepath);
+}
+
+bool Application::loadScene(const std::string& filepath) {
+    SceneConfig sceneConfig;
+    
+    if (!SceneSerializer::loadScene(sceneConfig, filepath)) {
+        return false;
+    }
+    
+    // 恢复光源
+    lights = sceneConfig.lights;
+    lightAnimationEnabled = sceneConfig.lightAnimationEnabled;
+    
+    // 恢复显示设置
+    displayMode = sceneConfig.displayMode;
+    wireframeMode = sceneConfig.wireframeMode;
+    isPaused = sceneConfig.isPaused;
+    glPolygonMode(GL_FRONT_AND_BACK, wireframeMode ? GL_LINE : GL_FILL);
+    
+    // 恢复背景（TODO: 需要在 Application 中添加 backgroundColor 成员）
+    // config.backgroundColor = sceneConfig.backgroundColor;
+    
+    // 恢复摄像机
+    camera.setPosition(sceneConfig.cameraPosition);
+    // TODO: 恢复方向和其他参数需要 Camera 类提供相应接口
+    // camera.setFront(sceneConfig.cameraFront);
+    // camera.setUp(sceneConfig.cameraUp);
+    
+    std::cout << "Scene restored successfully" << std::endl;
+    return true;
 }
