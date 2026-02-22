@@ -35,9 +35,8 @@ bool Application::initWindow() {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    // 使用兼容模式，以便在更多环境中工作
-    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
     window = glfwCreateWindow(config.width, config.height,
                               config.title.c_str(), nullptr, nullptr);
@@ -124,8 +123,7 @@ void Application::initScene() {
     
     // Create material
     material = std::make_shared<CMaterial>("TexturedMaterial");
-    // 不设置材质的shader，让Mesh::draw()使用当前激活的shader（lightingShader）
-    // material->setShader(shader);  // 注释掉这行
+    material->setShader(shader);
     material->setColors(glm::vec3(1.0f), glm::vec3(0.5f), glm::vec3(0.1f));
     material->setProperties(32.0f, 0.5f);
 
