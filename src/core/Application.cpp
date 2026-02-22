@@ -229,6 +229,16 @@ void Application::processInput() {
     if (glfwGetKey(window, GLFW_KEY_5) == GLFW_RELEASE) {
         key5Pressed = false;
     }
+    
+    // L 键切换光源动画
+    static bool lPressed = false;
+    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS && !lPressed) {
+        lPressed = true;
+        lightAnimationEnabled = !lightAnimationEnabled;
+    }
+    if (glfwGetKey(window, GLFW_KEY_L) == GLFW_RELEASE) {
+        lPressed = false;
+    }
 }
 
 void Application::updateDeltaTime() {
@@ -287,6 +297,17 @@ void Application::renderScene() {
 
     // 获取当前时间（暂停时使用暂停时间）
     float currentTime = isPaused ? pausedTime : (float)glfwGetTime();
+    
+    // 更新光源位置（圆形轨道）
+    if (lightAnimationEnabled) {
+        lightPos.x = sin(currentTime * lightOrbitSpeed) * lightOrbitRadius;
+        lightPos.z = cos(currentTime * lightOrbitSpeed) * lightOrbitRadius;
+        lightPos.y = lightOrbitHeight;
+        
+        // 更新光源 uniform
+        shader->use();
+        shader->setVec3("light.position", lightPos);
+    }
 
     shader->setInt("hasDiffuseTexture", 1);
     glActiveTexture(GL_TEXTURE0);
