@@ -119,6 +119,19 @@ void Application::initScene() {
     } catch (const std::exception& e) {
         std::cerr << "Texture load error: " << e.what() << std::endl;
     }
+    
+    // 加载镜面反射纹理
+    try {
+        specularTexture = std::make_shared<CTexture>(
+            "resources/textures/container.jpg",
+            TextureType::Specular
+        );
+        std::cout << "Loaded specular texture: "
+                  << specularTexture->width << "x" << specularTexture->height
+                  << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Specular texture load error: " << e.what() << std::endl;
+    }
 
     // 创建多种几何体（使用 MeshUtils）
     // 立方体
@@ -333,6 +346,26 @@ void Application::setGlobalUniforms() {
         shader->setInt("diffuseTexture", 0);
     }
     
+    // 设置镜面反射纹理
+    bool hasSpecular = specularTexture != nullptr;
+    shader->setInt("hasSpecularTexture", hasSpecular ? 1 : 0);
+    
+    if (hasSpecular) {
+        glActiveTexture(GL_TEXTURE1);
+        specularTexture->bind(1);
+        shader->setInt("specularTexture", 1);
+    }
+    
+    // 设置法线贴图
+    bool hasNormal = normalTexture != nullptr;
+    shader->setInt("hasNormalTexture", hasNormal ? 1 : 0);
+    
+    if (hasNormal) {
+        glActiveTexture(GL_TEXTURE2);
+        normalTexture->bind(2);
+        shader->setInt("normalTexture", 2);
+    }
+    
     // 设置材质（Phong 光照）
     shader->setVec3("material.ambient", material->ambientColor);
     shader->setVec3("material.diffuse", material->diffuseColor);
@@ -522,6 +555,7 @@ void Application::renderImGui() {
         if (ImGui::BeginMenu("窗口")) {
             ImGui::MenuItem("性能统计", nullptr, &showStatsWindow);
             ImGui::MenuItem("光源控制", nullptr, &showLightWindow);
+            ImGui::MenuItem("纹理控制", nullptr, &showTextureWindow);
             ImGui::Separator();
             ImGui::MenuItem("显示 UI", nullptr, &showImGui);
             ImGui::EndMenu();
@@ -567,6 +601,33 @@ void Application::renderImGui() {
             ImGui::Separator();
             ImGui::PopID();
         }
+        ImGui::End();
+    }
+    
+    // 纹理控制窗口
+    if (showTextureWindow) {
+        ImGui::Begin("纹理控制", &showTextureWindow);
+        
+        ImGui::Text("漫反射纹理");
+        ImGui::Checkbox("启用", reinterpret_cast<bool*>(&diffuseTexture != nullptr));
+        ImGui::SameLine();
+        ImGui::Text("(container2.png)");
+        
+        ImGui::Text("镜面反射纹理");
+        ImGui::Checkbox("启用", reinterpret_cast<bool*>(&specularTexture != nullptr));
+        ImGui::SameLine();
+        ImGui::Text("(container.jpg)");
+        
+        ImGui::Text("法线贴图");
+        ImGui::Checkbox("启用", reinterpret_cast<bool*>(&normalTexture != nullptr));
+        ImGui::Text("(暂无文件)");
+        
+        ImGui::Separator();
+        ImGui::Checkbox("重复模式", &textureWrapRepeat);
+        ImGui::Checkbox("线性过滤", &textureFilterLinear);
+        
+        ImGui::Text("提示: 纹理参数需要在运行时动态应用");
+        
         ImGui::End();
     }
     

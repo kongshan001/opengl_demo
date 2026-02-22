@@ -108,6 +108,11 @@ private:
     // 纹理
     std::shared_ptr<CTexture> diffuseTexture;
     std::shared_ptr<CTexture> specularTexture;
+    std::shared_ptr<CTexture> normalTexture;
+    
+    // 纹理参数
+    bool textureWrapRepeat = true;   // 重复模式
+    bool textureFilterLinear = true; // 线性过滤
     
     // 时间管理
     float deltaTime;
@@ -223,6 +228,7 @@ private:
     // ImGui 相关
     bool showLightWindow = true;  // 光源控制窗口
     bool showStatsWindow = true;  // 性能统计窗口
+    bool showTextureWindow = true; // 纹理控制窗口
 };
 
 #endif
